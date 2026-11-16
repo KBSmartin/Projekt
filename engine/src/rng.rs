@@ -54,3 +54,80 @@ impl GameRng {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn same_seed_gives_same_sequence() {
+        let mut a = GameRng::new(1234);
+        let mut b = GameRng::new(1234);
+        for _ in 0..1000 {
+            assert_eq!(a.next_u64(), b.next_u64());
+            assert_eq!(a.next_u32(), b.next_u32());
+            assert_eq!(a.range(-50, 50), b.range(-50, 50));
+        }
+    }
+
+    #[test]
+    fn different_seeds_give_different_sequences() {
+        let a: Vec<u64> = {
+            let mut r = GameRng::new(1);
+            (0..8).map(|_| r.next_u64()).collect()
+        };
+        let b: Vec<u64> = {
+            let mut r = GameRng::new(2);
+            (0..8).map(|_| r.next_u64()).collect()
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn clone_continues_identically() {
+        let mut a = GameRng::new(99);
+        a.next_u64();
+        let mut b = a.clone();
+        for _ in 0..100 {
+            assert_eq!(a.next_u32(), b.next_u32());
+        }
+    }
+
+    /// Locks the exact output for one seed. If this fails, saved seeds and
+    /// simulation results are no longer comparable, so only update it on purpose.
+    #[test]
+    fn known_sequence_for_seed_42() {
+        let mut rng = GameRng::new(42);
+        let rolls: Vec<i32> = (0..10).map(|_| rng.range(1, 6)).collect();
+        assert_eq!(rolls, vec![4, 4, 5, 1, 3, 3, 5, 4, 1, 3]);
+    }
+
+    #[test]
+    fn range_stays_in_bounds_and_hits_every_value() {
+        let mut rng = GameRng::new(7);
+        let mut seen = [false; 6];
+        for _ in 0..10_000 {
+            let v = rng.range(1, 6);
+            assert!((1..=6).contains(&v));
+            seen[(v - 1) as usize] = true;
+        }
+        assert!(seen.iter().all(|&s| s));
+    }
+
+    #[test]
+    fn range_edge_cases() {
+        let mut rng = GameRng::new(3);
+        assert_eq!(rng.range(5, 5), 5);
+        for _ in 0..1000 {
+            assert!((-3..=-1).contains(&rng.range(-3, -1)));
+        }
+        // Full i32 range must not overflow.
+        rng.range(i32::MIN, i32::MAX);
+    }
+
+    #[test]
+    #[should_panic]
+    fn range_panics_when_lo_greater_than_hi() {
+        GameRng::new(0).range(2, 1);
+    }
+}

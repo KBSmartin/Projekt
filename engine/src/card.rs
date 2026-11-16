@@ -261,3 +261,151 @@ fn validate(card: &Card) -> Result<(), CardLoadError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Wraps a single card JSON object into an array and loads it.
+    fn load_one(card_json: &str) -> Result<CardDb, CardLoadError> {
+        CardDb::from_json(&format!("[{card_json}]"))
+    }
+
+    #[test]
+    fn builtin_cards_load() {
+        let db = CardDb::builtin().expect("data/cards.json must be valid");
+        assert!(
+            (5..=8).contains(&db.len()),
+            "M0 expects 5 to 8 cards, got {}",
+            db.len()
+        );
+    }
+
+    #[test]
+    fn builtin_strike_matches_prototype() {
+        let db = CardDb::builtin().unwrap();
+        let strike = db.get("strike").expect("strike exists");
+        assert_eq!(strike.name, "Schlag");
+        assert_eq!(strike.kind, CardKind::Attack);
+        assert_eq!(strike.cost, 1);
+        assert_eq!(strike.rarity, Rarity::Starter);
+        assert_eq!(strike.tags, vec![Tag::Slash]);
+        assert_eq!(strike.effects.damage, 6);
+        assert_eq!(strike.effects.block, 0);
+    }
+
+    #[test]
+    fn builtin_tags_follow_konzept() {
+        let db = CardDb::builtin().unwrap();
+        let tags = |id: &str| db.get(id).unwrap().tags.clone();
+        assert_eq!(tags("strike"), vec![Tag::Slash]);
+        assert_eq!(tags("heavy"), vec![Tag::Slash]);
+        assert_eq!(tags("venom"), vec![Tag::Poison, Tag::Throw]);
+        assert_eq!(tags("guard"), vec![Tag::Block]);
+    }
+
+    #[test]
+    fn builtin_cards_cover_every_tag() {
+        let db = CardDb::builtin().unwrap();
+        for tag in Tag::ALL {
+            assert!(
+                db.cards().iter().any(|c| c.has_tag(tag)),
+                "no card with tag {tag:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn get_unknown_id_is_none() {
+        assert!(CardDb::builtin().unwrap().get("does_not_exist").is_none());
+    }
+
+    #[test]
+    fn missing_effects_default_to_zero() {
+        let db = load_one(
+            r#"{"id":"x","name":"X","kind":"skill","cost":0,"rarity":"common","tags":["draw"]}"#,
+        )
+        .unwrap();
+        assert_eq!(db.get("x").unwrap().effects, Effects::default());
+    }
+
+    #[test]
+    fn malformed_json_is_rejected() {
+        assert!(matches!(
+            CardDb::from_json("[{"),
+            Err(CardLoadError::Json(_))
+        ));
+    }
+
+    #[test]
+    fn unknown_tag_is_rejected() {
+        let r = load_one(
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":["fire"]}"#,
+        );
+        assert!(matches!(r, Err(CardLoadError::Json(_))));
+    }
+
+    #[test]
+    fn unknown_effect_field_is_rejected() {
+        // Catches typos and prototype short names such as "dmg".
+        let r = load_one(
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":["slash"],"effects":{"dmg":6}}"#,
+        );
+        assert!(matches!(r, Err(CardLoadError::Json(_))));
+    }
+
+    #[test]
+    fn duplicate_id_is_rejected() {
+        let card =
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":["slash"]}"#;
+        let r = CardDb::from_json(&format!("[{card},{card}]"));
+        assert!(matches!(r, Err(CardLoadError::DuplicateId(id)) if id == "x"));
+    }
+
+    #[test]
+    fn more_than_two_tags_is_rejected() {
+        let r = load_one(
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":["slash","poison","area"]}"#,
+        );
+        assert!(matches!(r, Err(CardLoadError::InvalidTags { .. })));
+    }
+
+    #[test]
+    fn duplicate_tag_is_rejected() {
+        let r = load_one(
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":["slash","slash"]}"#,
+        );
+        assert!(matches!(r, Err(CardLoadError::InvalidTags { .. })));
+    }
+
+    #[test]
+    fn untagged_card_is_rejected_unless_status() {
+        let attack = load_one(
+            r#"{"id":"x","name":"X","kind":"attack","cost":1,"rarity":"common","tags":[]}"#,
+        );
+        assert!(matches!(attack, Err(CardLoadError::InvalidTags { .. })));
+
+        let junk = load_one(
+            r#"{"id":"curse","name":"Last","kind":"status","cost":0,"rarity":"junk","tags":[],"effects":{"unplayable":true}}"#,
+        );
+        assert!(junk.is_ok());
+    }
+
+    #[test]
+    fn empty_name_is_rejected() {
+        let r = load_one(
+            r#"{"id":"x","name":" ","kind":"attack","cost":1,"rarity":"common","tags":["slash"]}"#,
+        );
+        assert!(matches!(
+            r,
+            Err(CardLoadError::EmptyField { field: "name", .. })
+        ));
+    }
+
+    #[test]
+    fn serde_roundtrip_keeps_cards_equal() {
+        let db = CardDb::builtin().unwrap();
+        let json = serde_json::to_string(db.cards()).unwrap();
+        assert_eq!(CardDb::from_json(&json).unwrap(), db);
+    }
+}
