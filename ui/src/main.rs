@@ -13,6 +13,8 @@ const SPRITE_SIZE: u32 = 16;
 const SPRITE_SCALE: u32 = 6;
 
 fn main() {
+    // Show Rust panics as readable messages in the browser console.
+    console_error_panic_hook::set_once();
     leptos::mount::mount_to_body(App);
 }
 

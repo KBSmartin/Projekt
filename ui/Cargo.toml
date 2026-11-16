@@ -8,3 +8,4 @@ publish.workspace = true
 [dependencies]
 engine.workspace = true
 leptos.workspace = true
+console_error_panic_hook.workspace = true
