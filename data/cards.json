@@ -34,7 +34,7 @@
   { "id": "decay", "name": "Ausbluten", "icon": "🧫", "character": "marksman", "kind": "skill", "cost": 1, "rarity": "rare", "tags": ["poison"], "effects": { "double_poison": true } },
   { "id": "deadshot", "name": "Meisterschuss", "icon": "🦅", "character": "marksman", "kind": "attack", "cost": 2, "rarity": "rare", "tags": ["throw"], "effects": { "damage": 22, "exhaust": true } },
 
-  { "id": "spark", "name": "Funke", "icon": "✨", "character": "mage", "kind": "attack", "cost": 1, "rarity": "starter", "tags": ["spell"], "effects": { "damage": 6 } },
+  { "id": "spark", "name": "Funke", "icon": "✨", "character": "mage", "kind": "attack", "cost": 1, "rarity": "starter", "tags": ["spell"], "effects": { "damage": 5 } },
   { "id": "ward", "name": "Schutzzauber", "icon": "🔮", "character": "mage", "kind": "skill", "cost": 1, "rarity": "starter", "tags": ["block"], "effects": { "block": 5 } },
   { "id": "frostbolt", "name": "Frostlanze", "icon": "❄️", "character": "mage", "kind": "attack", "cost": 1, "rarity": "starter", "tags": ["spell"], "effects": { "damage": 6, "weak": 1 } },
   { "id": "chain", "name": "Kettenblitz", "icon": "⚡", "character": "mage", "kind": "attack", "cost": 1, "rarity": "common", "tags": ["spell", "area"], "effects": { "damage": 4, "all_enemies": true } },

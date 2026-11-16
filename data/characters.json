@@ -6,8 +6,8 @@
     "description": "Steht in der ersten Reihe. Viele Lebenspunkte, Hiebe und dicker Block.",
     "max_hp": 80,
     "trait_name": "Eisenhaut",
-    "trait_text": "Beginnt jeden Kampf mit 6 Block.",
-    "trait": { "type": "start_block", "amount": 6 },
+    "trait_text": "Erhält zu Beginn jeder Runde 4 Block.",
+    "trait": { "type": "turn_block", "amount": 4 },
     "deck": ["strike", "strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", "bash"]
   },
   {
@@ -26,10 +26,10 @@
     "name": "Magier",
     "icon": "🔮",
     "description": "Wenig Lebenspunkte, dafür Zauber, die ganze Gruppen treffen und ihn nebenbei schützen.",
-    "max_hp": 60,
+    "max_hp": 55,
     "trait_name": "Arkaner Schild",
-    "trait_text": "Jeder Zauber gibt 2 Block.",
-    "trait": { "type": "tag_block", "tag": "spell", "amount": 2 },
+    "trait_text": "Jeder Zauber gibt 1 Block.",
+    "trait": { "type": "tag_block", "tag": "spell", "amount": 1 },
     "deck": ["spark", "spark", "spark", "spark", "spark", "ward", "ward", "ward", "ward", "frostbolt"]
   }
 ]

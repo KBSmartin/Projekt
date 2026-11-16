@@ -37,12 +37,13 @@ fn force_outcome(r: &mut Run, outcome: Outcome) {
 #[test]
 fn new_run_uses_character_data() {
     let d = data();
-    for (id, hp, first_card) in [
-        ("warrior", 80, "strike"),
-        ("marksman", 70, "arrow"),
-        ("mage", 60, "spark"),
+    for (id, first_card) in [
+        ("warrior", "strike"),
+        ("marksman", "arrow"),
+        ("mage", "spark"),
     ] {
         let r = run(&d, id);
+        let hp = d.character(id).unwrap().max_hp;
         assert_eq!((r.hp, r.max_hp), (hp, hp));
         assert_eq!(r.gold, START_GOLD);
         assert_eq!(r.deck.len(), 10);
@@ -80,7 +81,13 @@ fn first_fight_uses_easy_encounters_and_character_bonus() {
     let Phase::Combat(c) = &r.phase else { panic!() };
     let ids: Vec<String> = c.enemies.iter().map(|e| e.def.id.clone()).collect();
     assert!(d.regions[0].easy.contains(&ids));
-    assert_eq!(c.player.block, 6, "Krieger: Eisenhaut");
+    let turn_block = d
+        .character("warrior")
+        .unwrap()
+        .trait_rule
+        .combat_bonus()
+        .turn_block;
+    assert_eq!(c.player.block, turn_block, "Krieger: Eisenhaut");
 }
 
 // ---------- combat results ----------
@@ -178,7 +185,7 @@ fn bosses_lead_to_the_next_region_and_finally_to_victory() {
                 .all(|c| d.cards.get(&c.id).unwrap().rarity == Rarity::Rare)
         );
         r.skip_reward(&d).unwrap();
-        assert_eq!(r.hp, 10 + tea + 24, "40 % of 60 after a boss");
+        assert_eq!(r.hp, 10 + tea + r.max_hp * 4 / 10, "40 % heal after a boss");
     }
     assert_eq!(r.phase, Phase::Victory);
 }
@@ -300,16 +307,17 @@ fn message(r: &Run) -> String {
 fn spring_heals_and_shows_the_amount() {
     let d = data();
     let mut r = at_event(&d, "spring");
-    r.hp = 50;
+    r.hp = r.max_hp - 10;
     r.choose_event_option(&d, 0).unwrap();
-    assert_eq!(r.hp, 60);
+    assert_eq!(r.hp, r.max_hp, "heal is capped");
     assert_eq!(message(&r), "Du heilst 10 LP.");
     r.leave_event(&d).unwrap();
     assert_eq!(r.phase, Phase::Map);
 
     let mut r = at_event(&d, "spring");
+    let max = r.max_hp;
     r.choose_event_option(&d, 1).unwrap();
-    assert_eq!((r.hp, r.max_hp), (66, 66));
+    assert_eq!((r.hp, r.max_hp), (max + 6, max + 6));
 }
 
 #[test]
@@ -317,7 +325,7 @@ fn altar_costs_hp_for_a_rare_card() {
     let d = data();
     let mut r = at_event(&d, "altar");
     r.choose_event_option(&d, 0).unwrap();
-    assert_eq!(r.hp, 52);
+    assert_eq!(r.hp, r.max_hp - 8);
     let Phase::Reward(reward) = &r.phase else {
         panic!()
     };

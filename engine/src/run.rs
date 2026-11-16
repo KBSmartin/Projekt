@@ -23,6 +23,14 @@ pub const MIN_DECK: usize = 5;
 pub const TEA_HEAL: i32 = 6;
 pub const CARD_CHOICES: usize = 3;
 pub const SHOP_CARDS: usize = 5;
+/// KONZEPT.md: enemy values grow by this factor (in percent) with every map.
+/// The concept's starting value was 125; the bot simulation favored 120.
+pub const REGION_SCALE_PCT: u32 = 120;
+
+/// Enemy HP and damage in percent for the map with this index (0, 1, 2 …).
+pub fn region_scale_pct(region: usize) -> u32 {
+    (0..region).fold(100, |pct, _| pct * REGION_SCALE_PCT / 100)
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct RunStats {
@@ -321,6 +329,7 @@ impl Run {
             deck: &self.deck,
             relics: &self.relics,
             bonus,
+            enemy_scale_pct: region_scale_pct(self.region),
         };
         let combat = Combat::start(setup, kind, &ids, &data.enemies, &data.cards, &mut self.rng)
             .map_err(|e| ActionError::Data(e.to_string()))?;

@@ -152,6 +152,8 @@ pub struct CombatBonus {
     pub tag_damage: Option<(Tag, i32)>,
     /// Block gained whenever a card with this tag is played.
     pub tag_block: Option<(Tag, i32)>,
+    /// Block gained at the start of every player turn.
+    pub turn_block: i32,
 }
 
 /// Everything the combat needs from the run.
@@ -162,6 +164,13 @@ pub struct CombatSetup<'a> {
     pub deck: &'a [CardInstance],
     pub relics: &'a [Relic],
     pub bonus: CombatBonus,
+    /// Enemy HP and attack damage in percent (100 = as in the data).
+    pub enemy_scale_pct: u32,
+}
+
+/// Scales a value by a percentage, rounded to the nearest integer.
+fn scale(value: u32, pct: u32) -> u32 {
+    ((u64::from(value) * u64::from(pct) + 50) / 100) as u32
 }
 
 /// Who suffered something in a [`LogEntry`].
@@ -253,6 +262,8 @@ pub struct Combat {
     pub tag_damage: Option<(Tag, i32)>,
     /// Block for playing cards with a tag (from [`CombatBonus`]).
     pub tag_block: Option<(Tag, i32)>,
+    /// Block at the start of every player turn (from [`CombatBonus`]).
+    pub turn_block: i32,
     /// Recent events, oldest first.
     pub log: Vec<LogEntry>,
 }
@@ -286,13 +297,18 @@ impl Combat {
             let def = enemy_db
                 .get(id)
                 .ok_or_else(|| CombatError::UnknownEnemy(id.to_string()))?;
-            let hp = rng.range(def.hp[0] as i32, def.hp[1] as i32);
+            let rolled = rng.range(def.hp[0] as i32, def.hp[1] as i32);
+            let hp = scale(rolled as u32, setup.enemy_scale_pct) as i32;
             let move_index = match kind {
                 CombatKind::Fight => rng.index(def.moves.len()),
                 CombatKind::Elite | CombatKind::Boss => 0,
             };
+            let mut def = def.clone();
+            for m in &mut def.moves {
+                m.damage = m.damage.map(|d| scale(d, setup.enemy_scale_pct));
+            }
             enemies.push(EnemyState {
-                def: def.clone(),
+                def,
                 hp,
                 max_hp: hp,
                 block: 0,
@@ -335,6 +351,7 @@ impl Combat {
             outcome: None,
             tag_damage: setup.bonus.tag_damage,
             tag_block: setup.bonus.tag_block,
+            turn_block: setup.bonus.turn_block,
             log: Vec::new(),
         };
         combat.start_turn(rng);
@@ -515,6 +532,7 @@ impl Combat {
         if self.turn > 1 {
             self.player.block = 0;
         }
+        self.player.block += self.turn_block;
         let before = self.player.hp;
         self.player.status.tick_poison(&mut self.player.hp);
         if self.player.hp < before {

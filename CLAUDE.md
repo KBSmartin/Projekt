@@ -13,7 +13,7 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 
 Die Portierung bleibt regeltreu zum Prototyp. Bewusste Abweichungen tragen im Code den Kommentar `Fix:`.
 
-Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`; die ui rendert nur `Run::phase` und ruft Aktionen auf. `engine::bot` spielt Läufe über dieselben Aktionen (Tests und `sim`).
+Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`; die ui rendert nur `Run::phase` und ruft Aktionen auf. `engine::bot` spielt Läufe über dieselben Aktionen (Tests und `sim`). Balancing läuft über `engine::bot::smart` (Zugsuche mit simuliertem Gegnerzug): Ziel ist, dass die Charaktere nah beieinanderliegen und der Smart-Bot etwa die Hälfte der Läufe gewinnt. Nach Änderungen an Karten, Gegnern oder Eigenheiten `sim` laufen lassen.
 
 **Regel: engine kennt keine UI.** Keine Abhängigkeit auf leptos, web-sys, wasm-bindgen o. ä. in `engine`. Alle Zufallswürfe laufen über `engine::GameRng` (ChaCha8 mit Seed), nie über andere Zufallsquellen.
 
@@ -21,7 +21,8 @@ Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`; die ui rendert n
 
 ```
 cargo test                  # alle Tests
-cargo run -p sim            # Simulation (nativ)
+cargo run --release -p sim  # Simulation: Smart-Bot, 300 Läufe je Charakter
+cargo run --release -p sim -- --bot naive --runs 500 --seed 1000
 trunk serve                 # Dev-Server, aus dem Workspace-Root
 trunk build --release       # fertige Dateien in dist/
 ```

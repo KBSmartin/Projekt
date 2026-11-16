@@ -59,6 +59,7 @@ fn start_with(
         deck: &d,
         relics,
         bonus: CombatBonus::default(),
+        enemy_scale_pct: 100,
     };
     let c = Combat::start(setup, kind, enemy_ids, &enemies(), &cards(), &mut rng).unwrap();
     (c, rng)
@@ -204,6 +205,7 @@ fn start_rejects_unknown_data() {
         deck: &d,
         relics: &[],
         bonus: CombatBonus::default(),
+        enemy_scale_pct: 100,
     };
     let r = Combat::start(
         setup,
@@ -521,7 +523,9 @@ fn character_bonus_applies() {
             extra_draw: 1,
             tag_damage: Some((Tag::Slash, 2)),
             tag_block: Some((Tag::Poison, 3)),
+            turn_block: 0,
         },
+        enemy_scale_pct: 100,
     };
     let mut c = Combat::start(
         setup,
@@ -543,6 +547,62 @@ fn character_bonus_applies() {
     play(&mut c, &mut rng, 0, None);
     assert_eq!(c.enemies[0].hp, 9, "Giftpfeil has no Hieb tag");
     assert_eq!(c.player.block, block + 3, "Gift card gives block");
+}
+
+#[test]
+fn turn_block_comes_every_turn() {
+    let mut rng = GameRng::new(1);
+    let d = deck(&["strike"; 10]);
+    let setup = CombatSetup {
+        hp: 50,
+        max_hp: 75,
+        deck: &d,
+        relics: &[],
+        bonus: CombatBonus {
+            turn_block: 3,
+            ..CombatBonus::default()
+        },
+        enemy_scale_pct: 100,
+    };
+    let mut c = Combat::start(
+        setup,
+        CombatKind::Boss,
+        &["dummy"],
+        &enemies(),
+        &cards(),
+        &mut rng,
+    )
+    .unwrap();
+    assert_eq!(c.player.block, 3);
+    set_hand(&mut c, &[]);
+    end(&mut c, &mut rng);
+    assert_eq!(c.player.hp, 48, "5 damage, 3 blocked");
+    assert_eq!(c.player.block, 3, "fresh block next turn");
+}
+
+#[test]
+fn enemy_scaling_raises_hp_and_damage() {
+    let mut rng = GameRng::new(1);
+    let d = deck(&["strike"; 10]);
+    let setup = CombatSetup {
+        hp: 50,
+        max_hp: 75,
+        deck: &d,
+        relics: &[],
+        bonus: CombatBonus::default(),
+        enemy_scale_pct: 156,
+    };
+    let c = Combat::start(
+        setup,
+        CombatKind::Boss,
+        &["dummy"],
+        &enemies(),
+        &cards(),
+        &mut rng,
+    )
+    .unwrap();
+    assert_eq!(c.enemies[0].hp, 62, "40 * 1.56 = 62.4");
+    assert_eq!(c.intent_damage(0), Some(8), "5 * 1.56 = 7.8");
 }
 
 #[test]
@@ -694,6 +754,7 @@ fn greedy_fights_always_end() {
             deck: &d,
             relics: &[],
             bonus: CombatBonus::default(),
+            enemy_scale_pct: 100,
         };
         let mut c = Combat::start(
             setup,
