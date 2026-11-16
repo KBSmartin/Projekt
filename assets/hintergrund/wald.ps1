@@ -32,9 +32,11 @@ function Trunk($x, $top, $bottom, $w, $base, $dark, $lite, $roots) {
   Rect $lite $x $top ([Math]::Max(1, [int]($w / 6))) ($bottom - $top)
   Rect $dark ($x + $w - [Math]::Max(1, [int]($w / 5))) $top ([Math]::Max(1, [int]($w / 5))) ($bottom - $top)
   if ($roots) {
-    Poly $base @(($x - $w * 0.6), $bottom, $x, ($bottom - $w * 0.9), ($x + $w * 0.3), $bottom)
-    Poly $base @(($x + $w * 0.7), $bottom, ($x + $w), ($bottom - $w * 0.9), ($x + $w * 1.6), $bottom)
-    Poly $dark @(($x + $w * 1.0), $bottom, ($x + $w), ($bottom - $w * 0.6), ($x + $w * 1.6), $bottom)
+    Ell '#0a120c' ($x - $w * 0.8) ($bottom - 3) ($w * 2.6) 6 120
+    Poly $base @(($x - $w * 0.75), ($bottom + 1), ($x - $w * 0.2), ($bottom - 3), $x, ($bottom - $w * 0.45), ($x + $w * 0.3), ($bottom + 1))
+    Poly $lite @(($x - $w * 0.7), ($bottom + 1), ($x - $w * 0.2), ($bottom - 2), ($x - $w * 0.1), ($bottom - 1), ($x - $w * 0.5), ($bottom + 1))
+    Poly $base @(($x + $w * 0.3), ($bottom + 1), ($x + $w * 0.5), ($bottom - $w * 0.2), ($x + $w * 0.7), ($bottom + 1))
+    Poly $dark @(($x + $w * 0.65), ($bottom + 1), ($x + $w), ($bottom - $w * 0.45), ($x + $w * 1.2), ($bottom - 3), ($x + $w * 1.75), ($bottom + 1))
   }
 }
 
@@ -52,14 +54,23 @@ foreach ($row in @(@{ y = 112; c = '#8fa49c'; h = 30 }, @{ y = 122; c = '#6f877e
   }
   Rect $row.c 0 ($row.y + 2) $ImgW 30
 }
-# Mid trunks, faded by fog.
-foreach ($t in @(@(40, 9), @(78, 7), @(112, 6), @(196, 6), @(228, 8), @(262, 9), @(140, 4), @(176, 4))) {
-  Trunk $t[0] 30 140 $t[1] '#5e5a4c' '#4a473c' '#7a7562' $false
+# Mid trees, faded by fog: trunk, two branches, and a crown sitting on the trunk top.
+$midTrees = @(@(40, 9, 34), @(78, 7, 44), @(112, 6, 50), @(196, 6, 48), @(228, 8, 40), @(262, 9, 32), @(140, 4, 58), @(176, 4, 56))
+foreach ($t in $midTrees) {
+  $x = $t[0]; $w = $t[1]; $top = $t[2]
+  Trunk $x ($top - 6) 140 $w '#5e5a4c' '#4a473c' '#7a7562' $false
+  $cx = $x + [int]($w / 2)
+  Rect '#4a473c' ($cx - $w) ($top + 4) $w 2; Rect '#4a473c' ($cx) ($top + 9) $w 2
 }
 # Fog bands over the mid layer.
 for ($fy = 90; $fy -lt 140; $fy++) { Rect '#c0ccc2' 0 $fy $ImgW 1 ([int](110 * [Math]::Sin(($fy - 90) / 50.0 * [Math]::PI))) }
-# Mid canopy.
-for ($k = 0; $k -lt 14; $k++) { Foliage (Rnd 20 300) (Rnd 18 52) (Rnd 14 22) '#2f4a33' '#3f6340' '#6a8f4c' 8 }
+# Mid canopy: one crown per tree, centred on its trunk top and hanging down over it.
+foreach ($t in $midTrees) {
+  $cx = $t[0] + [int]($t[1] / 2); $r = 10 + $t[1]
+  Foliage $cx ($t[2] - 2) $r '#2f4a33' '#3f6340' '#6a8f4c' 10
+  Foliage ($cx - [int]($r / 2)) ($t[2] + 6) ([int]($r * 0.7)) '#2f4a33' '#3f6340' '#6a8f4c' 6
+  Foliage ($cx + [int]($r / 2)) ($t[2] + 6) ([int]($r * 0.7)) '#2f4a33' '#3f6340' '#6a8f4c' 6
+}
 # Light rays from the top middle.
 foreach ($ray in @(@(150, 118, 0.0), @(172, 100, 0.0), @(196, 128, 0.0), @(132, 86, 0.0))) {
   Poly '#f4f0c8' @($ray[0], 0, ($ray[0] + 14), 0, ($ray[1] + 22), 170, ($ray[1] - 6), 170) 34
@@ -76,10 +87,12 @@ foreach ($p in @(@(118, 150, 26), @(190, 152, 28), @(96, 166, 22), @(214, 168, 2
 # Front trunks, big and dark, with roots.
 Trunk 22 0 168 26 '#3f2c20' '#2a1c14' '#5e4430' $true
 Trunk 274 0 170 28 '#3f2c20' '#2a1c14' '#5e4430' $true
-Trunk 88 20 150 12 '#4a3626' '#33251a' '#6a4c34' $true
-Trunk 226 18 152 13 '#4a3626' '#33251a' '#6a4c34' $true
+Trunk 88 0 150 12 '#4a3626' '#33251a' '#6a4c34' $true
+Trunk 226 0 152 13 '#4a3626' '#33251a' '#6a4c34' $true
 # Front canopy along the top.
-for ($k = 0; $k -lt 26; $k++) { Foliage (Rnd -10 330) (Rnd -8 22) (Rnd 16 28) '#16261a' '#24402a' '#3e6a38' 9 }
+# Closed band along the top edge, then extra mass where the front trunks enter it.
+for ($x = -10; $x -lt 335; $x += 16) { Foliage $x (Rnd -6 6) (Rnd 18 24) '#16261a' '#24402a' '#3e6a38' 9 }
+foreach ($fx in @(35, 94, 232, 288)) { Foliage $fx (Rnd 14 22) 22 '#16261a' '#24402a' '#3e6a38' 10 }
 for ($k = 0; $k -lt 6; $k++) { Foliage (Rnd 120 200) (Rnd 2 18) (Rnd 10 16) '#2a4a2c' '#4f7a3c' '#a8c860' 7 }
 # Ferns and grass blades.
 for ($k = 0; $k -lt 70; $k++) {

@@ -10,7 +10,11 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `ui/`: Leptos-Oberfläche (CSR), gebaut mit Trunk. `ui/index.html` ist der Trunk-Einstieg.
 - `sim/`: natives Kommandozeilenprogramm für die Bot-Simulation.
 - `launcher/`: Standalone-Startprogramm (siehe Befehle).
-- `assets/`: Quellen der Grafiken. `portraets/basis/*.txt` sind die Porträts als Textraster (ein Zeichen pro Pixel, Palette im Kopf); `portraets/animationen.ps1` baut daraus die Spritesheets nach `ui/assets/portraets/` (Frames nebeneinander). `hintergrund/wald.ps1` erzeugt den Waldhintergrund. Die fertigen PNGs in `ui/assets/` sind eingecheckt und werden von Trunk mitkopiert. Die Skripte brauchen Windows-PowerShell (System.Drawing).
+- `assets/`: Quellen der Grafiken, `assets/bauen.ps1` erzeugt alle neu und kopiert sie nach `ui/assets/`.
+  - `portraets/basis/*.txt`: Porträts als Textraster (ein Zeichen pro Pixel, Palette im Kopf); `portraets/animationen.ps1` baut daraus die Spritesheets (Frames nebeneinander).
+  - `karten/karten.ps1`: ein 16 × 16-Symbol pro Karte (`ui/assets/karten/<id>.png`), aus Formen und Materialfarben mit Schattierung und Kontur. Eine neue Karte braucht dort einen Eintrag, sonst bricht das Skript ab.
+  - `hintergrund/{wald,wueste,festung}.ps1`: ein Hintergrund pro Gebiet (CSS-Klasse `bg-<region-id>`), gemeinsame Helfer in `pixel.ps1`.
+  - Die fertigen PNGs in `ui/assets/` sind eingecheckt und werden von Trunk mitkopiert. Die Skripte brauchen Windows-PowerShell (System.Drawing).
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.
 
 Die Portierung bleibt regeltreu zum Prototyp. Bewusste Abweichungen tragen im Code den Kommentar `Fix:`.

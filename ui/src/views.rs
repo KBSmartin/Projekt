@@ -280,7 +280,9 @@ fn card_inner(card: &Card, upgraded: bool, damage: i32, block: i32) -> AnyView {
         <span class="cost">{cost}</span>
         <span class="cn">{name}</span>
         <span class="ct">{card.kind.name()}</span>
-        <span class="ci">{card.icon.clone()}</span>
+        <span class="ci">
+            <img src=format!("assets/karten/{}.png", card.id) alt="" />
+        </span>
         <span class="cx">{text::card_text(card, damage, block)}</span>
         <span class="tags">{tags}</span>
     }

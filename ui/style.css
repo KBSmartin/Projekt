@@ -148,7 +148,8 @@ button.card:disabled { opacity: .42; cursor: default; }
 .cost { position: absolute; top: -13px; left: -9px; width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: #251a05; font-family: var(--fd); font-weight: 800; font-size: 1.1rem; display: grid; place-items: center; border: 2px solid var(--bg); }
 .cn { font-family: var(--fd); font-weight: 700; font-size: 1.05rem; line-height: 1.05; margin-top: 7px; }
 .ct { font-size: .66rem; text-transform: uppercase; letter-spacing: .09em; color: var(--mute); }
-.ci { font-size: 1.8rem; text-align: center; line-height: 1.2; }
+.ci { text-align: center; line-height: 0; padding: 2px 0; }
+.ci img { width: 48px; height: 48px; image-rendering: pixelated; }
 .cx { font-size: .8rem; line-height: 1.18; color: #cdd5d3; flex: 1; }
 .tags { font-size: .66rem; color: var(--acc); text-align: center; letter-spacing: .04em; }
 .t-a { --ct: var(--atk); }
@@ -172,11 +173,10 @@ button.card:disabled { opacity: .42; cursor: default; }
 .rl div { display: flex; gap: 10px; align-items: center; }
 .rl-icon { font-size: 1.5rem; }
 
-/* Pixel-art background (320x180, scaled without smoothing). Other regions tint
-   the forest until they get their own picture. */
+/* Pixel-art background per region (320x180, scaled without smoothing). */
 .bgimg { position: fixed; inset: 0; z-index: -2; background: #0e1113 url(assets/hintergrund/wald.png) center / cover no-repeat; image-rendering: pixelated; }
-.bg-desert { filter: sepia(.75) saturate(1.6) hue-rotate(-18deg) brightness(.85); }
-.bg-fortress { filter: grayscale(.4) hue-rotate(150deg) brightness(.8); }
+.bg-desert { background-image: url(assets/hintergrund/wueste.png); }
+.bg-fortress { background-image: url(assets/hintergrund/festung.png); }
 .app::before { background: radial-gradient(ellipse 80% 55% at 50% -8%, color-mix(in srgb, var(--acc) 18%, transparent), transparent 72%), linear-gradient(#0000 55%, #05080699); }
 
 /* Hero portraits: 8 frames of 16x16 side by side, shown 8x. */
