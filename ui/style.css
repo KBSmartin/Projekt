@@ -172,6 +172,64 @@ button.card:disabled { opacity: .42; cursor: default; }
 .rl div { display: flex; gap: 10px; align-items: center; }
 .rl-icon { font-size: 1.5rem; }
 
+/* Pixel-art background (320x180, scaled without smoothing). Other regions tint
+   the forest until they get their own picture. */
+.bgimg { position: fixed; inset: 0; z-index: -2; background: #0e1113 url(assets/hintergrund/wald.png) center / cover no-repeat; image-rendering: pixelated; }
+.bg-desert { filter: sepia(.75) saturate(1.6) hue-rotate(-18deg) brightness(.85); }
+.bg-fortress { filter: grayscale(.4) hue-rotate(150deg) brightness(.8); }
+.app::before { background: radial-gradient(ellipse 80% 55% at 50% -8%, color-mix(in srgb, var(--acc) 18%, transparent), transparent 72%), linear-gradient(#0000 55%, #05080699); }
+
+/* Hero portraits: 8 frames of 16x16 side by side, shown 8x. */
+.portrait { width: 128px; height: 128px; image-rendering: pixelated; background-size: 1024px 128px; background-repeat: no-repeat; }
+.pa-idle { animation: pframes 1440ms steps(8) infinite; }
+.pa-heilung { animation: pframes 880ms steps(8) 1 forwards; }
+.pa-schaden { animation: pframes 720ms steps(8) 1 forwards; }
+.pa-gift { animation: pframes 1120ms steps(8) 1 forwards; }
+@keyframes pframes { from { background-position: 0 0; } to { background-position: -1024px 0; } }
+.char .portrait { margin: -4px 0 2px; }
+
+/* Full-window scenes: fight and map. */
+.app.full { max-width: none; padding: 0; }
+.scene { display: grid; gap: 12px; padding: 12px; min-height: 100vh; }
+.box { background: #0d1210d9; border: 1px solid #ffffff1f; border-radius: 10px; box-shadow: 0 6px 18px #0008; backdrop-filter: blur(2px); }
+.side { grid-area: side; display: grid; gap: 10px; align-content: start; width: 176px; }
+.pbox { padding: 10px; display: grid; gap: 6px; justify-items: center; }
+.pframe { width: 136px; height: 136px; display: grid; place-items: center; background: #0006; border: 1px solid #ffffff1a; border-radius: 6px; }
+.pname { font-family: var(--fd); font-size: 1.3rem; color: var(--acc); line-height: 1; cursor: help; }
+.pbox .hp { width: 100%; margin: 0; }
+.pmeta { display: flex; justify-content: space-between; width: 100%; font-size: .85rem; font-weight: 700; }
+.sack { padding: 10px; display: grid; gap: 8px; }
+.box-h { font-family: var(--fd); font-size: 1.15rem; color: var(--acc); }
+.slots { display: grid; grid-template-columns: repeat(4, 34px); gap: 4px; justify-content: center; }
+.slot { width: 34px; height: 34px; border-radius: 5px; background: #ffffff0a; border: 1px solid #ffffff14; display: grid; place-items: center; font-size: 1.15rem; }
+.slot.full { background: #ffffff14; border-color: color-mix(in srgb, var(--acc) 50%, transparent); cursor: help; }
+.btn.sm { padding: 5px 10px; font-size: .9rem; }
+.field { grid-area: field; display: grid; align-content: center; justify-items: center; min-width: 0; }
+
+.fight-scene { grid-template-columns: 176px 190px 1fr; grid-template-rows: 1fr auto; grid-template-areas: "side field field" "stats stats hand"; }
+.fight-scene .field { align-content: end; padding-bottom: 8px; }
+.fight-scene .enemies { min-height: 260px; }
+.fight-scene .en { background: #0d121099; border-color: #ffffff12; }
+.fight-scene .en.tg { background: color-mix(in srgb, var(--acc) 18%, #0d1210cc); }
+.fight-scene .log { min-height: 0; color: #c9d1c9; text-shadow: 0 1px 2px #000; }
+.fight-scene .hint { text-shadow: 0 1px 3px #000; }
+.statsbox { grid-area: stats; align-self: end; padding: 12px 14px; display: grid; gap: 10px; justify-items: center; }
+.statsrow { display: flex; gap: 12px; align-items: center; }
+.statsbox .hp.lg { min-width: 220px; }
+.statsbox .chips { justify-content: flex-start; }
+.statsbox .legend { margin: 0; max-width: 340px; font-size: .8rem; }
+.fight-scene .hand { grid-area: hand; align-self: end; flex-wrap: nowrap; padding: 22px 8px 4px; min-height: 0; gap: 0; }
+.fight-scene .hand .card { box-shadow: 0 6px 14px #000a; }
+.fight-scene .hand .card + .card { margin-left: -14px; }
+.fight-scene .hand .card:hover, .fight-scene .hand .card.sel { z-index: 2; }
+
+.map-scene { grid-template-columns: 176px 1fr; grid-template-areas: "side field"; }
+.map-scene .field { align-content: start; }
+.map-scene .mapwrap { padding: 12px 16px 8px; }
+.map-scene svg.map { height: calc(100vh - 130px); min-height: 420px; width: auto; max-width: 100%; margin: 0 auto; }
+.map-scene .scene, .map-scene { height: 100vh; }
+.map-scene .reg { text-align: center; margin-bottom: 6px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01s !important; animation-iteration-count: 1 !important; transition: none !important; }
 }

@@ -33,6 +33,45 @@ fn main() {
     leptos::mount::mount_to_body(App);
 }
 
+/// Animation the hero portrait plays (sprite sheets in `ui/assets/portraets`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PortraitAnim {
+    Idle,
+    Heal,
+    Hit,
+    Poison,
+}
+
+impl PortraitAnim {
+    /// Part of the sprite sheet file name and of the CSS class.
+    pub fn file(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Heal => "heilung",
+            Self::Hit => "schaden",
+            Self::Poison => "gift",
+        }
+    }
+
+    /// One run through all 8 frames.
+    fn duration(self) -> Duration {
+        Duration::from_millis(match self {
+            Self::Idle => 1440,
+            Self::Heal => 880,
+            Self::Hit => 720,
+            Self::Poison => 1120,
+        })
+    }
+}
+
+/// Player HP and poison, inside a fight from the fight itself.
+fn vitals(run: &Run) -> (i32, u32) {
+    match &run.phase {
+        Phase::Combat(c) => (c.player.hp, c.player.status.poison),
+        _ => (run.hp, 0),
+    }
+}
+
 /// UI state shared by all screens.
 #[derive(Clone, Copy)]
 pub struct Game {
@@ -41,6 +80,8 @@ pub struct Game {
     /// Hand card waiting for a target.
     pub selected: RwSignal<Option<usize>>,
     pub deck_open: RwSignal<bool>,
+    /// Current portrait animation and a counter, so a new trigger restarts it.
+    pub portrait: RwSignal<(PortraitAnim, u32)>,
     finishing: RwSignal<bool>,
 }
 
@@ -50,7 +91,48 @@ impl Game {
             run: RwSignal::new(None),
             selected: RwSignal::new(None),
             deck_open: RwSignal::new(false),
+            portrait: RwSignal::new((PortraitAnim::Idle, 0)),
             finishing: RwSignal::new(false),
+        }
+    }
+
+    fn vitals(self) -> Option<(i32, u32)> {
+        self.run.with_untracked(|r| r.as_ref().map(vitals))
+    }
+
+    /// Picks the portrait reaction to an HP change: losing at most the poison
+    /// the player had counts as poison, other losses as a hit, gains as healing.
+    fn react(self, before: Option<(i32, u32)>) {
+        let (Some((hp0, poison0)), Some((hp1, _))) = (before, self.vitals()) else {
+            return;
+        };
+        let anim = if hp1 < hp0 {
+            if poison0 > 0 && (hp0 - hp1) as u32 <= poison0 {
+                PortraitAnim::Poison
+            } else {
+                PortraitAnim::Hit
+            }
+        } else if hp1 > hp0 {
+            PortraitAnim::Heal
+        } else {
+            return;
+        };
+        self.play(anim);
+    }
+
+    /// Plays a one-shot animation, then returns to idle (unless replaced).
+    pub fn play(self, anim: PortraitAnim) {
+        let key = self.portrait.get_untracked().1.wrapping_add(1);
+        self.portrait.set((anim, key));
+        if anim != PortraitAnim::Idle {
+            set_timeout(
+                move || {
+                    if self.portrait.get_untracked().1 == key {
+                        self.portrait.set((PortraitAnim::Idle, key.wrapping_add(1)));
+                    }
+                },
+                anim.duration(),
+            );
         }
     }
 
@@ -65,6 +147,7 @@ impl Game {
             Ok(run) => {
                 self.selected.set(None);
                 self.deck_open.set(false);
+                self.play(PortraitAnim::Idle);
                 self.run.set(Some(run));
             }
             Err(e) => leptos::logging::error!("Lauf konnte nicht starten: {e}"),
@@ -79,6 +162,7 @@ impl Game {
     /// fight stays visible for a moment and then moves on to the result.
     pub fn act(self, f: impl FnOnce(&mut Run, &GameData) -> Result<(), ActionError>) {
         self.selected.set(None);
+        let before = self.vitals();
         self.run.update(|run| {
             if let Some(run) = run
                 && let Err(e) = f(run, data())
@@ -86,6 +170,7 @@ impl Game {
                 leptos::logging::warn!("Aktion abgelehnt: {e}");
             }
         });
+        self.react(before);
         self.schedule_combat_end();
     }
 
@@ -102,6 +187,7 @@ impl Game {
         set_timeout(
             move || {
                 self.finishing.set(false);
+                let before = self.vitals();
                 self.run.update(|run| {
                     if let Some(run) = run
                         && let Err(e) = run.finish_combat(data())
@@ -109,6 +195,7 @@ impl Game {
                         leptos::logging::warn!("Kampfende abgelehnt: {e}");
                     }
                 });
+                self.react(before);
             },
             COMBAT_END_DELAY,
         );

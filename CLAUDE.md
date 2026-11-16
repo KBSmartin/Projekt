@@ -10,6 +10,7 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `ui/`: Leptos-Oberfläche (CSR), gebaut mit Trunk. `ui/index.html` ist der Trunk-Einstieg.
 - `sim/`: natives Kommandozeilenprogramm für die Bot-Simulation.
 - `launcher/`: Standalone-Startprogramm (siehe Befehle).
+- `assets/`: Quellen der Grafiken. `portraets/basis/*.txt` sind die Porträts als Textraster (ein Zeichen pro Pixel, Palette im Kopf); `portraets/animationen.ps1` baut daraus die Spritesheets nach `ui/assets/portraets/` (Frames nebeneinander). `hintergrund/wald.ps1` erzeugt den Waldhintergrund. Die fertigen PNGs in `ui/assets/` sind eingecheckt und werden von Trunk mitkopiert. Die Skripte brauchen Windows-PowerShell (System.Drawing).
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.
 
 Die Portierung bleibt regeltreu zum Prototyp. Bewusste Abweichungen tragen im Code den Kommentar `Fix:`.
@@ -40,7 +41,9 @@ trunk build --release       # fertige Dateien in dist/
 ## Entscheidungen (aus KONZEPT.md)
 
 - Nur Desktop-Browser mit Maus und Tastatur, kein Handy-Layout.
-- Pixel-Art in 16 × 16 (Items, Artefakte) und 32 × 32 (Gegner, Charaktere), nur ganzzahlig skaliert (`image-rendering: pixelated`). Bis dahin Platzhalter.
+- Pixel-Art in 16 × 16 (Items, Artefakte) und 32 × 32 (Gegner), nur ganzzahlig skaliert (`image-rendering: pixelated`). Bis dahin Platzhalter.
+- Heldenporträts: 16 × 16, frontal, dunkle Kontur, Licht von links, je 8 Frames für Idle, Heilung, Schaden, Vergiftung. Gewählt: Krieger „Veteran“, Schütze „Elfe“, Magier „Spitzhut“.
+- Kampf und Weltkarte nutzen das ganze Fenster: links Porträt und Rucksack, im Kampf unten links Werte, unten Mitte die Hand. Hintergrund pro Gebiet als Pixel-Bild (320 × 180).
 - Kein Speichern, kein dauerhafter Fortschritt, keine Bestenliste.
 - Schadensreihenfolge: Kartenwert + Waffenwert + Stärke, dann Tag-Multiplikatoren, dann Schwäche und Verwundbar.
 - Tags: Hieb, Gift, Block, Schild, Wurf, Fläche, Ziehen, Zauber (`engine::Tag`). Jede Karte trägt ein bis zwei Tags (Statuskarten keine).

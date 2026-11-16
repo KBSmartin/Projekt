@@ -28,8 +28,11 @@ pub fn screen(game: Game) -> AnyView {
                 Phase::Victory | Phase::Defeat => end_screen(game, run),
             };
             let overlay = deck_open.then(|| deck_overlay(game, run));
+            // Fight and map use the whole window; other screens keep the column.
+            let full = matches!(run.phase, Phase::Combat(_) | Phase::Map);
             view! {
-                <main class="app" style=format!("--acc:{color}")>
+                <div class=format!("bgimg bg-{}", d.regions[run.region].id)></div>
+                <main class=if full { "app full" } else { "app" } style=format!("--acc:{color}")>
                     {body}
                     {overlay}
                 </main>
@@ -37,6 +40,94 @@ pub fn screen(game: Game) -> AnyView {
             .into_any()
         }
     })
+}
+
+/// Sprite sheet prefix of a character's portrait.
+fn hero_file(character: &str) -> &'static str {
+    match character {
+        "marksman" => "schuetze",
+        "mage" => "magier",
+        _ => "krieger",
+    }
+}
+
+/// Animated 16x16 portrait, shown 8x. Re-rendered when the animation changes,
+/// which restarts the CSS animation.
+fn portrait(game: Game, character: &str) -> AnyView {
+    let hero = hero_file(character);
+    view! {
+        <div class="pframe">
+            {move || {
+                let (anim, _) = game.portrait.get();
+                let file = anim.file();
+                view! {
+                    <div
+                        class=format!("portrait pa-{file}")
+                        style=format!("background-image:url(assets/portraets/{hero}_{file}.png)")
+                    ></div>
+                }
+            }}
+        </div>
+    }
+    .into_any()
+}
+
+/// Static idle portrait for the character choice.
+fn portrait_idle(character: &str) -> AnyView {
+    let hero = hero_file(character);
+    view! {
+        <div
+            class="portrait pa-idle"
+            style=format!("background-image:url(assets/portraets/{hero}_idle.png)")
+        ></div>
+    }
+    .into_any()
+}
+
+/// Left column on the fight and map screens: portrait with name, HP and gold,
+/// and the backpack (relics for now, equipment later) with the deck button.
+fn side_panel(game: Game, run: &Run, hp: i32, max_hp: i32) -> AnyView {
+    const SLOTS: usize = 12;
+    let d = data();
+    let ch = d.character(&run.character);
+    let name = ch.map_or(String::new(), |c| c.name.clone());
+    let tip = ch.map_or(String::new(), |c| format!("{}: {}", c.trait_name, c.trait_text));
+    let region = &d.regions[run.region];
+    let relics: Vec<_> = run.relics.iter().filter_map(|r| d.relic(*r)).collect();
+    let slots = (0..SLOTS)
+        .map(|i| match relics.get(i) {
+            Some(info) => view! {
+                <div class="slot full" title=format!("{}: {}", info.name, info.description)>
+                    {info.icon.clone()}
+                </div>
+            }
+            .into_any(),
+            None => view! { <div class="slot"></div> }.into_any(),
+        })
+        .collect_view();
+    view! {
+        <aside class="side">
+            <div class="box pbox">
+                {portrait(game, &run.character)}
+                <div class="pname" title=tip>{name}</div>
+                {hp_bar(hp, max_hp, false, format!("❤️ {}/{}", hp.max(0), max_hp))}
+                <div class="pmeta">
+                    <span>{format!("🪙 {}", run.gold)}</span>
+                    <span title=region.subtitle.clone()>
+                        {format!("{} {}/{}", region.icon, run.region + 1, d.regions.len())}
+                    </span>
+                </div>
+            </div>
+            <div class="box sack">
+                <div class="box-h">"Rucksack"</div>
+                <div class="slots">{slots}</div>
+                <button class="btn ghost sm" on:click=move |_| game.deck_open.set(true)>
+                    {format!("Deck ({})", run.deck.len())}
+                </button>
+            </div>
+        </aside>
+    }
+    .into_any()
 }
 
 // ---------- title ----------
@@ -50,7 +141,7 @@ fn title(game: Game) -> AnyView {
             let id = c.id.clone();
             view! {
                 <button class="char" on:click=move |_| game.start_run(&id)>
-                    <span class="char-icon">{c.icon.clone()}</span>
+                    {portrait_idle(&c.id)}
                     <span class="char-name">{c.name.clone()}</span>
                     <span class="char-hp">{format!("❤️ {} LP", c.max_hp)}</span>
                     <span class="char-desc">{c.description.clone()}</span>
@@ -65,6 +156,7 @@ fn title(game: Game) -> AnyView {
         })
         .collect_view();
     view! {
+        <div class="bgimg bg-forest"></div>
         <main class="app">
             <div class="title">
                 <div class="kicker">"Ein Deckbuilder-Roguelike · Vorab-Version"</div>
@@ -389,12 +481,23 @@ fn map_screen(game: Game, run: &Run) -> AnyView {
             }
         })
         .collect_view();
+    let region = &d.regions[run.region];
     view! {
-        {top_bar(game, run, true)}
-        {notice(run)}
-        <div class="mapwrap">
-            <svg class="map" viewBox=format!("0 0 {W} {H}")>{lines}{nodes}</svg>
-            <p class="legendline">"⚔️ Kampf · 💀 Elite · ❓ Ereignis · 🏕️ Rast · 🛒 Händler"</p>
+        <div class="scene map-scene">
+            {side_panel(game, run, run.hp, run.max_hp)}
+            <section class="field">
+                <div class="box mapwrap">
+                    <div class="reg">
+                        {region.name.clone()}
+                        <small>
+                            {format!("{} · Gebiet {} von {}", region.subtitle, run.region + 1, d.regions.len())}
+                        </small>
+                    </div>
+                    {notice(run)}
+                    <svg class="map" viewBox=format!("0 0 {W} {H}")>{lines}{nodes}</svg>
+                    <p class="legendline">"⚔️ Kampf · 💀 Elite · ❓ Ereignis · 🏕️ Rast · 🛒 Händler"</p>
+                </div>
+            </section>
         </div>
     }
     .into_any()
@@ -508,42 +611,48 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
         .collect_view();
 
     view! {
-        {top_bar(game, run, false)}
-        <div class="enemies">{enemies}</div>
-        <div class="log" aria-live="polite">{log}</div>
-        <div class="me">
-            <div class="orb" title="Energie">
-                {c.energy}
-                <small>{format!("/{}", c.max_energy)}</small>
-            </div>
-            <div class="mid">
-                {hp_bar(p.hp, p.max_hp, true, format!("❤️ {}/{}", p.hp.max(0), p.max_hp))}
-                {chips(p.block, &p.status)}
-            </div>
-            <div class="piles">
-                {format!("Runde {}", c.turn)}
-                <br />
-                {format!(
-                    "Ziehstapel {} · Ablage {} · Verbraucht {}",
-                    c.draw_pile.len(),
-                    c.discard.len(),
-                    c.exhaust.len(),
-                )}
-            </div>
-            <button class="btn" disabled=over on:click=move |_| game.act(|r, d| r.end_turn(d))>
-                "Zug beenden"
-            </button>
+        <div class="scene fight-scene">
+            {side_panel(game, run, p.hp, p.max_hp)}
+            <section class="field">
+                <div class="enemies">{enemies}</div>
+                <div class="log" aria-live="polite">{log}</div>
+                <p class="hint">{hint}</p>
+            </section>
+            <section class="box statsbox">
+                <div class="statsrow">
+                    <div class="orb" title="Energie">
+                        {c.energy}
+                        <small>{format!("/{}", c.max_energy)}</small>
+                    </div>
+                    <div class="mid">
+                        {hp_bar(p.hp, p.max_hp, true, format!("❤️ {}/{}", p.hp.max(0), p.max_hp))}
+                        {chips(p.block, &p.status)}
+                    </div>
+                </div>
+                <div class="piles">
+                    {format!("Runde {}", c.turn)}
+                    <br />
+                    {format!(
+                        "Ziehstapel {} · Ablage {} · Verbraucht {}",
+                        c.draw_pile.len(),
+                        c.discard.len(),
+                        c.exhaust.len(),
+                    )}
+                </div>
+                <button class="btn" disabled=over on:click=move |_| game.act(|r, d| r.end_turn(d))>
+                    "Zug beenden"
+                </button>
+                <details class="legend">
+                    <summary>"Zeichen erklärt"</summary>
+                    <p>
+                        "💪 Stärke: +1 Schaden pro Punkt bei jedem Angriff · 🥀 Schwäche: 25 % weniger Schaden · "
+                        "🎯 Verwundbar: 50 % mehr Schaden erlitten · 🧪 Gift: verliert zu Rundenbeginn LP, dann sinkt es um 1 · "
+                        "🌵 Dornen: Angreifer erleiden Schaden · 🛡️ Block: hält Schaden ab, verfällt zu Rundenbeginn"
+                    </p>
+                </details>
+            </section>
+            <section class="hand">{hand}</section>
         </div>
-        <p class="hint">{hint}</p>
-        <div class="hand">{hand}</div>
-        <details class="legend">
-            <summary>"Zeichen erklärt"</summary>
-            <p>
-                "💪 Stärke: +1 Schaden pro Punkt bei jedem Angriff · 🥀 Schwäche: 25 % weniger Schaden · "
-                "🎯 Verwundbar: 50 % mehr Schaden erlitten · 🧪 Gift: verliert zu Rundenbeginn LP, dann sinkt es um 1 · "
-                "🌵 Dornen: Angreifer erleiden Schaden · 🛡️ Block: hält Schaden ab, verfällt zu Rundenbeginn"
-            </p>
-        </details>
     }
     .into_any()
 }

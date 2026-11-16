@@ -1,0 +1,197 @@
+﻿# Schütze (Elfe), Animation heilung, 8 Frames zu 16x16, 110 ms je Frame
+0 #0c0a10 Kontur
+a #4a2026 Haut 1
+b #8a4038 Haut 2
+c #c06a4e Haut 3
+d #e8a078 Haut 4
+e #fcd2a8 Haut 5
+A #2e2a3c Bleich 1
+B #5e5c74 Bleich 2
+C #9c9cb0 Bleich 3
+D #d8d8e4 Bleich 4
+F #1e3a1e Ork 1
+G #3a6a2a Ork 2
+H #6aa03a Ork 3
+I #a8d060 Ork 4
+h #2a1018 Rot 1
+i #5c1c20 Rot 2
+j #962e24 Rot 3
+k #c8502c Rot 4
+l #ec8a48 Rot 5
+m #ffc080 Rot 6
+p #1a1418 Dunkel 1
+q #3a2a2a Dunkel 2
+s #6a4c3a Dunkel 3
+t #8a6a2a Blond 1
+u #d0a848 Blond 2
+v #f8e08a Blond 3
+x #8890a0 Grau 1
+y #c8d0dc Grau 2
+z #f4f8ff Grau 3
+w #e8eef8 Augenweiss
+r #3a8ae8 Blau
+g #6af0a0 Gruen leuchtend
+R #ff4a3a Rot leuchtend
+Y #ffd040 Gelb leuchtend
+1 #18181e Stahl 1
+2 #34343e Stahl 2
+3 #5a5a66 Stahl 3
+4 #8a8a98 Stahl 4
+5 #c4c4d0 Stahl 5
+7 #121014 Stoff schwarz 1
+8 #2a2630 Stoff schwarz 2
+L #2a1410 Leder 1
+M #5a2c1c Leder 2
+N #8a4a2c Leder 3
+J #12301e Gruen 1
+K #24542e Gruen 2
+O #3e8040 Gruen 3
+P #7ab858 Gruen 4
+Q #1e1030 Violett 1
+S #3e2060 Violett 2
+T #6a3a98 Violett 3
+U #a070d0 Violett 4
+V #f0c050 Gold
+E #d8ccb0 Knochen hell
+X #8a7e66 Knochen dunkel
+n #8a2a30 Lippe
+o #2a0a10 Mund
+f #2a5a9a Blau 2
+6 #143060 Blau 1
+9 #7ab0e0 Blau 3
+--- Frame 1
+.....000000.....
+....0vuuuut0....
+...0vvuuuutt0...
+..0uvuuuutuut0..
+..0utedddddtu0..
+0.0udqqddqqcu0.0
+0ddudwgedgwcucc0
+.0cudddeddccuc0.
+..0ucdddccbbu0..
+..0utcdnncbtu0..
+.0uutbcccbbtu0..
+0OPut0abba0tuKJ0
+0OPutOJaaJOtuKJ0
+0OOtKOOKKJKKtJJ0
+gzKKLMNMMNMLKJJ0
+0KJJLLMMMNMLLJJ0
+--- Frame 2
+.....000000.....
+....0vuuuut0....
+...0vvuuuutt0...
+..0uvuuuutuut0..
+..0utedddddtu0..
+0.0udqqddqqcu0.0
+0ddudwzedzwcucc0
+.0cudddeddccuc0.
+..0ucdddccbbu0..
+..0utcdnncbtu0..
+.guutbcccbbtu0..
+gzPut0abba0tuKJ0
+0OPutOJaaJOtuKJ0
+0OOtKOOKKJKKtJJ0
+0OKKLMNMMNMLKzJ0
+0KJJLLMMMNMLLJJ0
+--- Frame 3
+.....KKKKKK.....
+....KvuuuutK....
+...KvvuuuuttK...
+..KuvuuuutuutK..
+..KuteeeeeetuK..
+K.KueqqeeqqduK.K
+KeeuewzeezwduddK
+.KdueeeeeeddudK.
+gzKudeeeddbbuK..
+.gKutdenndbtuK..
+.KuutbdddbbtuK..
+KOPutKabbaKtuzJK
+KOPutOJaaJOtuKJK
+KOOtKOOKKJKKtJJK
+KOKKLMNMMNMLKJJK
+KKJJLLMMMNMLLJJK
+--- Frame 4
+.....OOOOOO.....
+....OvuuuutO....
+...OvvuuuuttO...
+..OuvuuuutuutO..
+.KOuteeeeeetuO..
+OgOueqqeeqqduO.O
+OeeuewzeezwduddO
+.OdueeeeeeddudO.
+..Oudeeeddbbuzg.
+..OutdenndbtuO..
+.OuutbdddbbtuO..
+OOPutOabbaOtuKJO
+OOPutOJaaJOtuKJO
+OOOtKOOKKJKKtJJO
+OOKKLMNMMNMLKJzO
+OKJJLLMMMNMLLJJO
+--- Frame 5
+.....KKKKKK.....
+.K..KvuuuutK....
+KgKKvvuuuuttK...
+.KKuvuuuutuutK..
+..KuteeeeeetuK..
+K.KueqqeeqqdugKK
+KeeuewzeezwduddK
+.KdueeeeeeddudK.
+..KudeeeddbbuK..
+..KutdenndbtuK..
+.KuutbdddbbtuKg.
+KOPutKabbaKtuKzK
+KOPutOJaaJOtuKJK
+KOOtKOOKKJKKtJJK
+KOKKLMNMMNMLKJJK
+KKJJLLMMMNMLLJJK
+--- Frame 6
+.....OOOOOO.....
+....OvuuuutO.K..
+...OvvuuuuttOgK.
+..OuvuuuutuutO..
+..OuteeeeeetuO..
+O.OueqqeeqqduO.O
+OeeuewzeezwduddO
+.OdueeeeeeddudO.
+..OudeeeddbbuOzg
+..OutdenndbtuOg.
+.OuutbdddbbtuO..
+OOPutOabbaOtuKJO
+OOPutOJaaJOtuKJO
+OOOtKOOKKJKKtJJO
+OOzKLMNMMNMLKJJO
+OKJJLLMMMNMLLJJO
+--- Frame 7
+.....000000.....
+....0vuuuut0....
+...0vvuuuutt0...
+..0uvuuuutuut0..
+..0utedddddtu0K.
+0.0udqqddqqcuKgK
+0ddudwzedzwcucc0
+.0cudddeddccuc0.
+..0ucdddccbbu0..
+..0utcdnncbtu0..
+.0uutbcccbbtu0..
+0Ozut0abba0tuKJ0
+0OPutOJaaJOtuKJ0
+0OOtKOOKKJKKtJJ0
+0OKKLMNMMNMLKJJ0
+0KJJLLMMMNMLLJJ0
+--- Frame 8
+.....000000.....
+....0vuuuut0..K.
+...0vvuuuutt0KgK
+..0uvuuuutuut0K.
+..0utedddddtu0..
+0.0udqqddqqcu0.0
+0ddudwgedgwcucc0
+.0cudddeddccuc0.
+.gzucdddccbbu0..
+..gutcdnncbtu0..
+.0uutbcccbbtu0..
+0OPut0abba0tuKJ0
+0OPutOJaaJOtuKJ0
+0OOtKOOKKJKKtJJ0
+0OKKLMNMMNMLKJJ0
+0KJJLLMMMNMLLJJ0
