@@ -40,6 +40,5 @@ Layer 'nebel_dunkel' {
 }
 Layer 'funken' { for ($k = 0; $k -lt 26; $k++) { Glow '#e8ff7a' (Rnd 4 315) (Rnd 70 170) (Rnd 180 255) } }
 Layer 'sterne' { for ($k = 0; $k -lt 50; $k++) { Dot '#ffffff' (Rnd 0 319) (Rnd 0 95) 1 1 (Rnd 160 255) } }
-Layer 'strahlen' { foreach ($ray in @(@(150, 118), @(172, 100), @(196, 128), @(132, 86))) { Poly '#fff4c8' @($ray[0], 0, ($ray[0] + 14), 0, ($ray[1] + 22), 170, ($ray[1] - 6), 170) 40 } }
 Layer 'polarlicht' { for ($x = -320; $x -lt 640; $x += 2) { $y = 26 + 8 * [Math]::Sin($x * 2 * [Math]::PI / 160) + 4 * [Math]::Sin($x * 2 * [Math]::PI / 64); Rect '#5af0b0' $x $y 2 (Rnd 8 20) 34 } }
 Layer 'feuerschein' { Ell '#ffb060' 44 142 58 24 70; Ell '#ffd080' 60 148 26 12 90 }

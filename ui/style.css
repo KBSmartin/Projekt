@@ -228,7 +228,7 @@ button.card:disabled { opacity: .45; cursor: default; }
 @keyframes fx-drift { to { transform: translateX(50%); } }
 @keyframes fx-pulse { from { opacity: .15; } to { opacity: 1; } }
 @keyframes fx-flicker { 0% { opacity: 1; } 30% { opacity: .55; } 45% { opacity: .9; } 70% { opacity: .65; } 85% { opacity: 1; } }
-.fx-forest .l1 { background-image: url(assets/hintergrund/fx/strahlen.png); }
+.fx-forest .l1 { background-image: url(assets/hintergrund/fx/wald_glanz.png); background-size: cover; background-position: center; background-repeat: no-repeat; }
 .fx-forest .l2 { background-image: url(assets/hintergrund/fx/nebel.png); }
 .fx-forest .l3 { background-image: url(assets/hintergrund/fx/blaetter.png); }
 .fx-forest .l4 { background-image: url(assets/hintergrund/fx/funken.png); }
@@ -352,7 +352,7 @@ h3 { font-size: 12px; font-weight: 400; }
 .relicgain { font-size: 9px; line-height: 1.7; }
 .rl { font-size: 9px; }
 /* Motion of the effect layers per region. */
-.fx-forest .l1 { --d: 7s; animation: fx-pulse var(--d) steps(5) infinite alternate; }
+.fx-forest .l1 { --d: 2.4s; animation: fx-pulse var(--d) steps(4) infinite alternate; }
 .fx-forest .l2 { --d: 90s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
 .fx-forest .l3 { --d: 22s; top: -100%; height: 200%; background-size: 100% 50%; animation: fx-fall var(--d) steps(180) infinite; }
 .fx-forest .l4 { --d: 2.6s; animation: fx-pulse var(--d) steps(4) infinite alternate; }
