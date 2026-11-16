@@ -134,29 +134,65 @@ svg.map { width: 100%; height: auto; display: block; }
 .hint { text-align: center; color: var(--acc); font-weight: 700; margin-top: 6px; }
 .hand { display: flex; gap: 12px; padding: 20px 8px 12px; justify-content: center; min-height: 216px; flex-wrap: wrap; }
 
-/* Cards */
+/* Cards. Frame shape and colour by type (--ct), background tint by owning
+   character (--oc), trim and gem by rarity (--rc). Icons are 8x8, shown 6x. */
 .card {
-  position: relative; flex: 0 0 128px; width: 128px; height: 190px;
-  background: linear-gradient(180deg, var(--panel2), var(--panel));
-  border: 1px solid var(--line); border-top: 5px solid var(--ct, var(--line)); border-radius: 8px;
-  padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 3px;
-  transition: transform .15s, box-shadow .15s;
+  position: relative; flex: 0 0 132px; width: 132px; height: 196px; padding: 0 0 14px;
+  display: flex; flex-direction: column; text-align: left; color: var(--ink);
+  background:
+    radial-gradient(120% 55% at 50% 0%, color-mix(in srgb, var(--oc) 80%, transparent), transparent 75%),
+    repeating-linear-gradient(45deg, #ffffff06 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #1d1a1f, #110f13);
+  border: 2px solid var(--rc); border-radius: 10px;
+  box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px color-mix(in srgb, var(--ct) 75%, #000), 0 4px 10px #0009;
+  transition: transform .15s, box-shadow .15s, filter .15s;
 }
-button.card:hover:not(:disabled) { transform: translateY(-8px); }
-.card.sel { transform: translateY(-16px); box-shadow: 0 0 0 2px var(--acc), 0 10px 22px #000a; }
+button.card:hover:not(:disabled) { transform: translateY(-8px); filter: brightness(1.08); }
+.card.sel { transform: translateY(-16px); box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px var(--ct), 0 0 0 2px var(--acc), 0 10px 22px #000a; }
 button.card:disabled { opacity: .42; cursor: default; }
-.cost { position: absolute; top: -13px; left: -9px; width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: #251a05; font-family: var(--fd); font-weight: 800; font-size: 1.1rem; display: grid; place-items: center; border: 2px solid var(--bg); }
-.cn { font-family: var(--fd); font-weight: 700; font-size: 1.05rem; line-height: 1.05; margin-top: 7px; }
-.ct { font-size: .66rem; text-transform: uppercase; letter-spacing: .09em; color: var(--mute); }
-.ci { text-align: center; line-height: 0; padding: 2px 0; }
-.ci img { width: 48px; height: 48px; image-rendering: pixelated; }
-.cx { font-size: .8rem; line-height: 1.18; color: #cdd5d3; flex: 1; }
-.tags { font-size: .66rem; color: var(--acc); text-align: center; letter-spacing: .04em; }
-.t-a { --ct: var(--atk); }
+.cost {
+  position: absolute; z-index: 2; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, var(--gold) 60%, #8a6a20); color: #251a05;
+  font-family: var(--fd); font-weight: 800; font-size: 1.05rem; display: grid; place-items: center;
+  border: 2px solid #0a0809;
+}
+.cn {
+  margin: 6px 6px 0 14px; padding: 3px 8px 3px 18px; min-height: 22px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ct) 85%, #fff2), color-mix(in srgb, var(--ct) 60%, #000));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);
+  font-family: var(--fd); font-weight: 700; font-size: .98rem; line-height: 1.05; color: #fff6e6; text-shadow: 0 1px 0 #0008;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cn.long { font-size: .8rem; line-height: .95; white-space: normal; padding-top: 3px; padding-bottom: 2px; display: flex; align-items: center; }
+.art {
+  margin: 5px 9px 0; height: 58px; display: grid; place-items: center; border: 1px solid var(--rc); border-radius: 4px;
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ct) 55%, transparent), transparent 70%), #0b0a0d;
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 14px #000d;
+}
+.art img { width: 48px; height: 48px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #000a); }
+.ct { margin-top: 4px; text-align: center; font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: color-mix(in srgb, var(--ct) 45%, #fff); }
+.cx { flex: 1; margin: 3px 9px 0; font-size: .78rem; line-height: 1.18; color: #e4ddcc; text-align: center; }
+.gem { position: absolute; bottom: 5px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%) rotate(45deg); background: var(--rc); box-shadow: 0 0 0 1px #000, 0 0 6px var(--rc); }
+
+/* Type: attack has cut corners, power an arched top, status looks worn. */
+.t-a { --ct: var(--atk); border-radius: 3px; clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px); }
 .t-s { --ct: var(--skl); }
-.t-p { --ct: var(--pow); }
-.t-x { --ct: var(--junk); }
-.card.up .cn { color: #9fe3a4; }
+.t-p { --ct: var(--pow); border-radius: 48px 48px 10px 10px / 30px 30px 10px 10px; }
+.t-p .cn { margin-top: 12px; }
+.t-x { --ct: var(--junk); border-style: dashed; filter: saturate(.6); }
+/* Owner. */
+.o-warrior { --oc: #6a2a1c; }
+.o-marksman { --oc: #1f4f2a; }
+.o-mage { --oc: #35226a; }
+.o-neutral { --oc: #3a3a44; }
+/* Rarity. */
+.r-start { --rc: #6e6a72; }
+.r-common { --rc: #a8743e; }
+.r-uncommon { --rc: #a8c8e4; }
+.r-rare { --rc: #f0c050; }
+.r-rare { box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px color-mix(in srgb, var(--ct) 75%, #000), 0 0 12px #f0c05066, 0 4px 10px #0009; }
+.r-junk { --rc: #4a4a50; }
+.card.up .cn { color: #c8ffb8; }
 .grid { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; padding: 14px 0; }
 .item { display: grid; gap: 8px; justify-items: center; }
 .item.sold { opacity: .35; }

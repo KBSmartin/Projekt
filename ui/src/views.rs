@@ -4,7 +4,7 @@
 use crate::{Game, data, text};
 use engine::{
     Card, CardInstance, CardKind, Combat, EventResult, EventState, MAP_COLS, MAP_ROWS, MapNode,
-    NodeKind, Phase, PickState, Reward, RewardSource, Run, Shop, Statuses, needs_target,
+    NodeKind, Phase, PickState, Rarity, Reward, RewardSource, Run, Shop, Statuses, needs_target,
 };
 use leptos::prelude::*;
 
@@ -250,13 +250,38 @@ fn hp_bar(hp: i32, max: i32, large: bool, label: String) -> AnyView {
     .into_any()
 }
 
+/// Card classes: type (frame shape and colour), rarity (gem and trim) and
+/// owning character (background tint).
 fn card_class(card: &Card, upgraded: bool, extra: &str) -> String {
+    let rarity = match card.rarity {
+        Rarity::Starter => "r-start",
+        Rarity::Common => "r-common",
+        Rarity::Uncommon => "r-uncommon",
+        Rarity::Rare => "r-rare",
+        Rarity::Junk => "r-junk",
+    };
+    let owner = match card.character.as_deref() {
+        Some("warrior") => "o-warrior",
+        Some("marksman") => "o-marksman",
+        Some("mage") => "o-mage",
+        _ => "o-neutral",
+    };
     format!(
-        "card {}{}{}",
+        "card {} {rarity} {owner}{}{}",
         text::kind_class(card.kind),
         if upgraded { " up" } else { "" },
         extra
     )
+}
+
+fn rarity_name(r: Rarity) -> &'static str {
+    match r {
+        Rarity::Starter => "Startkarte",
+        Rarity::Common => "Gewöhnlich",
+        Rarity::Uncommon => "Ungewöhnlich",
+        Rarity::Rare => "Selten",
+        Rarity::Junk => "Last",
+    }
 }
 
 fn card_inner(card: &Card, upgraded: bool, damage: i32, block: i32) -> AnyView {
@@ -276,15 +301,22 @@ fn card_inner(card: &Card, upgraded: bool, damage: i32, block: i32) -> AnyView {
         .map(|t| t.name())
         .collect::<Vec<_>>()
         .join(" · ");
+    // Long names get a smaller font and may wrap in the banner.
+    let name_class = if name.chars().count() > 10 { "cn long" } else { "cn" };
+    let type_line = if tags.is_empty() {
+        card.kind.name().to_string()
+    } else {
+        format!("{} · {tags}", card.kind.name())
+    };
     view! {
         <span class="cost">{cost}</span>
-        <span class="cn">{name}</span>
-        <span class="ct">{card.kind.name()}</span>
-        <span class="ci">
+        <span class=name_class>{name}</span>
+        <span class="art">
             <img src=format!("assets/karten/{}.png", card.id) alt="" />
         </span>
+        <span class="ct">{type_line}</span>
         <span class="cx">{text::card_text(card, damage, block)}</span>
-        <span class="tags">{tags}</span>
+        <span class="gem" title=rarity_name(card.rarity)></span>
     }
     .into_any()
 }
