@@ -1,0 +1,10 @@
+[package]
+name = "ui"
+description = "Leptos (CSR) browser front end for Verlorene Lande."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+engine.workspace = true
+leptos.workspace = true

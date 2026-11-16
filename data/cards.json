@@ -1,0 +1,11 @@
+[
+  {
+    "id": "strike",
+    "name": "Schlag",
+    "kind": "attack",
+    "cost": 1,
+    "rarity": "starter",
+    "tags": ["slash"],
+    "effects": { "damage": 6 }
+  }
+]

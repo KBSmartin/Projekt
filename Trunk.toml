@@ -1,0 +1,4 @@
+# Run `trunk serve` / `trunk build --release` from the workspace root.
+[build]
+target = "ui/index.html"
+dist = "dist"
