@@ -520,6 +520,7 @@ fn character_bonus_applies() {
             start_block: 6,
             extra_draw: 1,
             tag_damage: Some((Tag::Slash, 2)),
+            tag_block: Some((Tag::Poison, 3)),
         },
     };
     let mut c = Combat::start(
@@ -538,8 +539,10 @@ fn character_bonus_applies() {
     assert_eq!(c.card_damage(&strike, None), 8);
     play(&mut c, &mut rng, 0, None);
     assert_eq!(c.enemies[0].hp, 12, "Hieb +2");
+    let block = c.player.block;
     play(&mut c, &mut rng, 0, None);
     assert_eq!(c.enemies[0].hp, 9, "Giftpfeil has no Hieb tag");
+    assert_eq!(c.player.block, block + 3, "Gift card gives block");
 }
 
 #[test]

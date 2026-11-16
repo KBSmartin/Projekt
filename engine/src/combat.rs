@@ -150,6 +150,8 @@ pub struct CombatBonus {
     pub extra_draw: u32,
     /// Flat damage bonus for cards with this tag.
     pub tag_damage: Option<(Tag, i32)>,
+    /// Block gained whenever a card with this tag is played.
+    pub tag_block: Option<(Tag, i32)>,
 }
 
 /// Everything the combat needs from the run.
@@ -249,6 +251,8 @@ pub struct Combat {
     pub outcome: Option<Outcome>,
     /// Flat damage bonus for cards with a tag (from [`CombatBonus`]).
     pub tag_damage: Option<(Tag, i32)>,
+    /// Block for playing cards with a tag (from [`CombatBonus`]).
+    pub tag_block: Option<(Tag, i32)>,
     /// Recent events, oldest first.
     pub log: Vec<LogEntry>,
 }
@@ -330,6 +334,7 @@ impl Combat {
             turn: 0,
             outcome: None,
             tag_damage: setup.bonus.tag_damage,
+            tag_block: setup.bonus.tag_block,
             log: Vec::new(),
         };
         combat.start_turn(rng);
@@ -349,6 +354,14 @@ impl Combat {
         DamageMods {
             weapon,
             ..DamageMods::NEUTRAL
+        }
+    }
+
+    /// Extra block for playing this card (from [`CombatBonus::tag_block`]).
+    pub fn tag_block_for(&self, card: &Card) -> i32 {
+        match self.tag_block {
+            Some((tag, block)) if card.has_tag(tag) => block,
+            _ => 0,
         }
     }
 
@@ -446,7 +459,7 @@ impl Combat {
                 }
             }
         }
-        self.player.block += e.block as i32;
+        self.player.block += e.block as i32 + self.tag_block_for(&card);
         self.player.status.thorns += e.thorns;
         self.player.status.strength += e.strength as i32;
         for &t in &targets {

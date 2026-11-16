@@ -1,0 +1,35 @@
+[
+  {
+    "id": "warrior",
+    "name": "Krieger",
+    "icon": "🛡️",
+    "description": "Steht in der ersten Reihe. Viele Lebenspunkte, Hiebe und dicker Block.",
+    "max_hp": 80,
+    "trait_name": "Eisenhaut",
+    "trait_text": "Beginnt jeden Kampf mit 6 Block.",
+    "trait": { "type": "start_block", "amount": 6 },
+    "deck": ["strike", "strike", "strike", "strike", "strike", "defend", "defend", "defend", "defend", "bash"]
+  },
+  {
+    "id": "marksman",
+    "name": "Schütze",
+    "icon": "🏹",
+    "description": "Kämpft auf Abstand mit Pfeilen, Wurfmessern und Gift.",
+    "max_hp": 70,
+    "trait_name": "Scharfschütze",
+    "trait_text": "Wurf-Karten verursachen +2 Schaden.",
+    "trait": { "type": "tag_damage", "tag": "throw", "amount": 2 },
+    "deck": ["arrow", "arrow", "arrow", "arrow", "arrow", "cover", "cover", "cover", "cover", "venom"]
+  },
+  {
+    "id": "mage",
+    "name": "Magier",
+    "icon": "🔮",
+    "description": "Wenig Lebenspunkte, dafür Zauber, die ganze Gruppen treffen und ihn nebenbei schützen.",
+    "max_hp": 60,
+    "trait_name": "Arkaner Schild",
+    "trait_text": "Jeder Zauber gibt 2 Block.",
+    "trait": { "type": "tag_block", "tag": "spell", "amount": 2 },
+    "deck": ["spark", "spark", "spark", "spark", "spark", "ward", "ward", "ward", "ward", "frostbolt"]
+  }
+]

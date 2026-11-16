@@ -1,130 +1,64 @@
-//! Command line bot simulation. For now: a smoke test that runs many single
-//! fights with the prototype's starting deck and a naive bot.
+//! Command line bot simulation: plays many whole runs per character with the
+//! naive bot from `engine::bot` and prints how far it gets.
 
-use engine::{
-    CardDb, CardInstance, Combat, CombatKind, CombatSetup, EnemyDb, GameRng, Outcome, needs_target,
-};
+use engine::{GameData, Phase, bot};
 use std::process::ExitCode;
 
-const FIGHTS_PER_ENCOUNTER: u64 = 1000;
-const MAX_TURNS: u32 = 100;
-const START_HP: i32 = 75;
-
-/// Easy encounters of the Düsterwald (prototype `REGIONS[0].easy`).
-const ENCOUNTERS: [&[&str]; 3] = [&["rat", "rat"], &["shroom", "rat"], &["wolf"]];
+const RUNS_PER_CHARACTER: u64 = 500;
 
 fn main() -> ExitCode {
-    let (cards, enemies) = match (CardDb::builtin(), EnemyDb::builtin()) {
-        (Ok(c), Ok(e)) => (c, e),
-        (Err(e), _) => return fail(&format!("Kartendaten fehlerhaft: {e}")),
-        (_, Err(e)) => return fail(&format!("Gegnerdaten fehlerhaft: {e}")),
-    };
-    let deck = starting_deck();
-
-    println!("Verlorene Lande – Simulation (Testlauf)");
-    println!(
-        "Karten: {}, Gegner: {}, Startdeck: {} Karten, {} Kämpfe je Begegnung",
-        cards.len(),
-        enemies.len(),
-        deck.len(),
-        FIGHTS_PER_ENCOUNTER
-    );
-    println!("Bot: spielt die erste spielbare Karte, Ziel ist der Gegner mit den wenigsten LP.\n");
-    println!(
-        "{:<20} {:>8} {:>10} {:>14}",
-        "Begegnung", "Siege", "Ø Runden", "Ø LP danach"
-    );
-
-    for encounter in ENCOUNTERS {
-        let mut wins = 0u64;
-        let mut turns = 0u64;
-        let mut hp_left = 0i64;
-        for seed in 0..FIGHTS_PER_ENCOUNTER {
-            let mut rng = GameRng::new(seed);
-            let setup = CombatSetup {
-                hp: START_HP,
-                max_hp: START_HP,
-                deck: &deck,
-                relics: &[],
-            };
-            let mut combat = match Combat::start(
-                setup,
-                CombatKind::Fight,
-                encounter,
-                &enemies,
-                &cards,
-                &mut rng,
-            ) {
-                Ok(c) => c,
-                Err(e) => return fail(&format!("Kampfstart fehlgeschlagen: {e}")),
-            };
-            run_naive_bot(&mut combat, &cards, &mut rng);
-            if combat.outcome == Some(Outcome::Win) {
-                wins += 1;
-                hp_left += i64::from(combat.player.hp);
-            }
-            turns += u64::from(combat.turn);
+    let data = match GameData::builtin() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Spieldaten fehlerhaft: {e}");
+            return ExitCode::FAILURE;
         }
-        let names: Vec<&str> = encounter
-            .iter()
-            .map(|id| enemies.get(id).map_or(*id, |e| e.name.as_str()))
-            .collect();
+    };
+    let regions = data.regions.len();
+
+    println!("Verlorene Lande – Simulation");
+    println!(
+        "{RUNS_PER_CHARACTER} Läufe je Charakter, einfacher Bot (erste spielbare Karte, erster Weg, kauft nichts).\n"
+    );
+    print!("{:<10} {:>7}", "Charakter", "Siege");
+    for i in 1..=regions {
+        print!(" {:>9}", format!("† Gebiet {i}"));
+    }
+    println!(" {:>9} {:>8}", "Ø Orte", "Ø Deck");
+
+    for ch in &data.characters {
+        let mut wins = 0u64;
+        let mut deaths = vec![0u64; regions];
+        let (mut nodes, mut deck) = (0u64, 0u64);
+        for seed in 0..RUNS_PER_CHARACTER {
+            let run = match bot::play_run(&data, &ch.id, seed) {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("{} Seed {seed}: Fehler im Ablauf: {e}", ch.name);
+                    return ExitCode::FAILURE;
+                }
+            };
+            match run.phase {
+                Phase::Victory => wins += 1,
+                Phase::Defeat => deaths[run.region] += 1,
+                _ => {
+                    eprintln!("{} Seed {seed}: Lauf nicht beendet", ch.name);
+                    return ExitCode::FAILURE;
+                }
+            }
+            nodes += u64::from(run.stats.nodes);
+            deck += run.deck.len() as u64;
+        }
+        let pct = |n: u64| format!("{:.1}%", n as f64 * 100.0 / RUNS_PER_CHARACTER as f64);
+        print!("{:<10} {:>7}", ch.name, pct(wins));
+        for d in &deaths {
+            print!(" {:>9}", pct(*d));
+        }
         println!(
-            "{:<20} {:>7.1}% {:>10.1} {:>14.1}",
-            names.join(" + "),
-            wins as f64 * 100.0 / FIGHTS_PER_ENCOUNTER as f64,
-            turns as f64 / FIGHTS_PER_ENCOUNTER as f64,
-            if wins > 0 {
-                hp_left as f64 / wins as f64
-            } else {
-                0.0
-            },
+            " {:>9.1} {:>8.1}",
+            nodes as f64 / RUNS_PER_CHARACTER as f64,
+            deck as f64 / RUNS_PER_CHARACTER as f64
         );
     }
     ExitCode::SUCCESS
-}
-
-/// Prototype `newRun`: 5× Schlag, 4× Block, 1× Schildstoß.
-fn starting_deck() -> Vec<CardInstance> {
-    let mut deck = Vec::new();
-    deck.extend((0..5).map(|_| CardInstance::new("strike")));
-    deck.extend((0..4).map(|_| CardInstance::new("defend")));
-    deck.push(CardInstance::new("bash"));
-    deck
-}
-
-fn run_naive_bot(combat: &mut Combat, cards: &CardDb, rng: &mut GameRng) {
-    while !combat.is_over() && combat.turn <= MAX_TURNS {
-        while let Some(i) = (0..combat.hand.len()).find(|&i| combat.playable_card(i, cards).is_ok())
-        {
-            let card = combat.hand[i].resolve(cards);
-            let target = if card.as_ref().is_some_and(needs_target) {
-                weakest_enemy(combat)
-            } else {
-                None
-            };
-            if combat.play_card(i, target, cards, rng).is_err() || combat.is_over() {
-                break;
-            }
-        }
-        if combat.is_over() {
-            break;
-        }
-        let _ = combat.end_turn(cards, rng);
-    }
-}
-
-fn weakest_enemy(combat: &Combat) -> Option<usize> {
-    combat
-        .enemies
-        .iter()
-        .enumerate()
-        .filter(|(_, e)| !e.dead)
-        .min_by_key(|(_, e)| e.hp)
-        .map(|(i, _)| i)
-}
-
-fn fail(msg: &str) -> ExitCode {
-    eprintln!("{msg}");
-    ExitCode::FAILURE
 }

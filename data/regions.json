@@ -1,0 +1,38 @@
+[
+  {
+    "id": "forest",
+    "name": "Düsterwald",
+    "subtitle": "Gift und Rudel",
+    "color": "#6fbf73",
+    "icon": "🌲",
+    "intro": "Gegner vergiften dich und greifen in Gruppen an. Gift tickt jede Runde, also lohnt es sich, Angreifer schnell auszuschalten.",
+    "easy": [["rat", "rat"], ["shroom", "rat"], ["wolf"]],
+    "hard": [["rat", "rat", "rat"], ["wolf", "rat"], ["shroom", "shroom"], ["wolf", "shroom"]],
+    "elites": [["moss"]],
+    "boss": ["mother"]
+  },
+  {
+    "id": "desert",
+    "name": "Aschewüste",
+    "subtitle": "Glut und Brandmale",
+    "color": "#e8833a",
+    "icon": "🏜️",
+    "intro": "Gegner mischen Brand-Karten in dein Deck. Hast du sie am Rundenende auf der Hand, verbrennen sie dich. Spiele also, was du kannst, oder halte Block bereit.",
+    "easy": [["scorp"], ["spark", "spark"], ["worm"]],
+    "hard": [["spark", "scorp"], ["spark", "spark", "spark"], ["worm", "spark"]],
+    "elites": [["priest"]],
+    "boss": ["colossus"]
+  },
+  {
+    "id": "fortress",
+    "name": "Frostfestung",
+    "subtitle": "Panzer und Frost",
+    "color": "#7cc4f0",
+    "icon": "🏔️",
+    "intro": "Gegner schützen sich mit viel Block und verstopfen deine Hand mit Frost. Brich Panzerungen mit hohem Schaden oder mit Gift, das Block umgeht.",
+    "easy": [["guard"], ["elem", "elem"], ["giant"]],
+    "hard": [["guard", "elem"], ["elem", "guard", "elem"], ["giant", "elem"]],
+    "elites": [["knight"]],
+    "boss": ["king"]
+  }
+]

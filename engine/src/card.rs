@@ -24,10 +24,12 @@ pub enum Tag {
     Area,
     /// Ziehen
     Draw,
+    /// Zauber (added for the Magier, not in the KONZEPT.md example list)
+    Spell,
 }
 
 impl Tag {
-    pub const ALL: [Tag; 7] = [
+    pub const ALL: [Tag; 8] = [
         Tag::Slash,
         Tag::Poison,
         Tag::Block,
@@ -35,6 +37,7 @@ impl Tag {
         Tag::Throw,
         Tag::Area,
         Tag::Draw,
+        Tag::Spell,
     ];
 
     /// German in-game name.
@@ -47,6 +50,7 @@ impl Tag {
             Tag::Throw => "Wurf",
             Tag::Area => "Fläche",
             Tag::Draw => "Ziehen",
+            Tag::Spell => "Zauber",
         }
     }
 }
@@ -143,11 +147,25 @@ pub struct Card {
     pub tags: Vec<Tag>,
     #[serde(default)]
     pub effects: Effects,
+    /// Placeholder symbol until the pixel art exists.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub icon: String,
+    /// Character whose card pool this card belongs to; `None` = every character.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub character: Option<String>,
 }
 
 impl Card {
     pub fn has_tag(&self, tag: Tag) -> bool {
         self.tags.contains(&tag)
+    }
+
+    /// Whether this card can show up in rewards and shops for `character`.
+    pub fn in_pool_of(&self, character: &str) -> bool {
+        matches!(
+            self.rarity,
+            Rarity::Common | Rarity::Uncommon | Rarity::Rare
+        ) && self.character.as_deref().is_none_or(|c| c == character)
     }
 
     /// Whether the card can be upgraded at all (prototype `upgradable`, minus the

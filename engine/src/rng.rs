@@ -73,6 +73,29 @@ impl GameRng {
         }
     }
 
+    /// Picks an item with probability proportional to its weight (prototype
+    /// `wpick`). Returns `None` if all weights are 0.
+    pub fn weighted<'a, T>(&mut self, items: &'a [(T, u32)]) -> Option<&'a T> {
+        let total: u64 = items.iter().map(|(_, w)| u64::from(*w)).sum();
+        if total == 0 {
+            return None;
+        }
+        let total = i32::try_from(total).expect("GameRng::weighted: weights too large");
+        let mut x = self.range(0, total - 1);
+        for (item, w) in items {
+            x -= *w as i32;
+            if x < 0 {
+                return Some(item);
+            }
+        }
+        unreachable!("x is below the total weight")
+    }
+
+    /// `true` with the given chance in percent (0..=100).
+    pub fn chance(&mut self, percent: u32) -> bool {
+        self.range(0, 99) < percent as i32
+    }
+
     /// Fisher-Yates shuffle in place, same order of draws as the prototype:
     /// walks from the last element down to index 1.
     pub fn shuffle<T>(&mut self, items: &mut [T]) {
@@ -185,6 +208,25 @@ mod tests {
         }
         let empty: [&str; 0] = [];
         assert!(rng.pick(&empty).is_none());
+    }
+
+    #[test]
+    fn weighted_follows_weights() {
+        let mut rng = GameRng::new(4);
+        let items = [("a", 1), ("b", 0), ("c", 3)];
+        let mut counts = [0u32; 3];
+        for _ in 0..4000 {
+            match *rng.weighted(&items).unwrap() {
+                "a" => counts[0] += 1,
+                "b" => counts[1] += 1,
+                _ => counts[2] += 1,
+            }
+        }
+        assert_eq!(counts[1], 0, "weight 0 is never picked");
+        assert!((800..1200).contains(&counts[0]), "{counts:?}");
+        assert!(rng.weighted(&[("x", 0)]).is_none());
+        let empty: [(&str, u32); 0] = [];
+        assert!(rng.weighted(&empty).is_none());
     }
 
     #[test]

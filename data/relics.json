@@ -1,0 +1,8 @@
+[
+  { "id": "anchor", "name": "Anker", "icon": "⚓", "description": "Beginne jeden Kampf mit 8 Block." },
+  { "id": "ruby", "name": "Blutrubin", "icon": "🔴", "description": "Beginne jeden Kampf mit +1 Stärke." },
+  { "id": "core", "name": "Energiekern", "icon": "🔋", "description": "+1 Energie pro Runde." },
+  { "id": "tea", "name": "Kräutertee", "icon": "🍵", "description": "Heile 6 LP nach jedem Kampf." },
+  { "id": "lens", "name": "Linse", "icon": "🔍", "description": "Ziehe jede Runde 1 Karte mehr." },
+  { "id": "coin", "name": "Glücksmünze", "icon": "🪙", "description": "50 % mehr Gold aus Kämpfen." }
+]

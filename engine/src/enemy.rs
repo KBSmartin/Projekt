@@ -47,6 +47,9 @@ pub struct EnemyDef {
     /// Inclusive HP range `[min, max]`, rolled at combat start.
     pub hp: [u32; 2],
     pub moves: Vec<Move>,
+    /// Placeholder symbol until the pixel art exists.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub icon: String,
 }
 
 /// Error while loading enemy data.

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "altar",
+    "title": "Blutaltar",
+    "icon": "🗿",
+    "text": "Ein Altar aus rotem Stein. In der Schale auf seiner Spitze steht noch Wasser, das nach Eisen riecht.",
+    "options": [
+      { "label": "Opfere 8 LP und wähle eine seltene Karte", "requires": { "min_hp": 11 },
+        "outcomes": [ { "effects": [ { "lose_hp": 8 }, "rare_card_choice" ] } ] },
+      { "label": "Weitergehen",
+        "outcomes": [ { "message": "Du lässt den Altar hinter dir." } ] }
+    ]
+  },
+  {
+    "id": "spring",
+    "title": "Heilquelle",
+    "icon": "⛲",
+    "text": "Klares Wasser sprudelt zwischen den Steinen hervor, kalt und süß.",
+    "options": [
+      { "label": "Trinken: heile 20 LP",
+        "outcomes": [ { "effects": [ { "heal": 20 } ], "message": "Du heilst {healed} LP." } ] },
+      { "label": "Baden: +6 maximale LP",
+        "outcomes": [ { "effects": [ { "gain_max_hp": 6 } ], "message": "Du fühlst dich robuster. +6 max. LP." } ] }
+    ]
+  },
+  {
+    "id": "chest",
+    "title": "Verschlossene Truhe",
+    "icon": "🧰",
+    "text": "Eine Truhe liegt halb im Dreck. Auf dem Deckel sind Zeichen eingeritzt, die du nicht kennst.",
+    "options": [
+      { "label": "Öffnen (50 % 90 Gold, 50 % Fluch)",
+        "outcomes": [
+          { "weight": 1, "effects": [ { "gain_gold": 90 } ], "message": "Gold! Du findest 90 Gold." },
+          { "weight": 1, "effects": [ { "add_card": "curse" } ], "message": "Ein Fluch fährt in dein Deck: die Karte Last." }
+        ] },
+      { "label": "Liegen lassen",
+        "outcomes": [ { "message": "Klüger so, vielleicht." } ] }
+    ]
+  },
+  {
+    "id": "smith",
+    "title": "Wanderschmied",
+    "icon": "⚒️",
+    "text": "Ein Schmied hat seinen Amboss am Wegrand aufgebaut und wärmt sich die Hände an der Esse.",
+    "options": [
+      { "label": "Karte verbessern (30 Gold)", "requires": { "min_gold": 30, "upgradable_card": true },
+        "outcomes": [ { "effects": [ { "pick": { "mode": "upgrade", "cost": 30 } } ] } ] },
+      { "label": "Karte entfernen (40 Gold)", "requires": { "min_gold": 40, "min_deck": 6 },
+        "outcomes": [ { "effects": [ { "pick": { "mode": "remove", "cost": 40 } } ] } ] },
+      { "label": "Weitergehen",
+        "outcomes": [ { "message": "Der Schmied nickt dir zu." } ] }
+    ]
+  },
+  {
+    "id": "dice",
+    "title": "Würfler",
+    "icon": "🎲",
+    "text": "Ein Mann schüttelt drei Würfel im Becher. „Vierzig Gold, ich zahle hundert. Wenn du Glück hast.“",
+    "options": [
+      { "label": "40 Gold setzen: 50 % auf 100 Gold", "requires": { "min_gold": 40 },
+        "outcomes": [
+          { "weight": 1, "effects": [ { "lose_gold": 40 }, { "gain_gold": 100 } ], "message": "Gewonnen! +100 Gold." },
+          { "weight": 1, "effects": [ { "lose_gold": 40 } ], "message": "Verloren. Der Mann grinst." }
+        ] },
+      { "label": "Weitergehen",
+        "outcomes": [ { "message": "Du lässt die Würfel liegen." } ] }
+    ]
+  },
+  {
+    "id": "trader",
+    "title": "Tauschhändler",
+    "icon": "🧙",
+    "text": "Eine vermummte Gestalt bietet an, eine deiner Karten gegen etwas Seltenes zu tauschen. Was genau, sagt sie nicht.",
+    "options": [
+      { "label": "Eine Karte gegen eine zufällige seltene tauschen",
+        "outcomes": [ { "effects": [ { "pick": { "mode": "trade", "cost": 0 } } ] } ] },
+      { "label": "Weitergehen",
+        "outcomes": [ { "message": "Die Gestalt verschwindet im Nebel." } ] }
+    ]
+  }
+]
