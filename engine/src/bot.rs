@@ -1,6 +1,10 @@
-//! A simple bot that plays whole runs through the same actions as the UI.
-//! Used by tests and by the `sim` crate. Deliberately naive: it is a smoke
-//! test and a baseline, not a good player.
+//! Bots that play whole runs through the same actions as the UI.
+//! Used by tests and by the `sim` crate.
+//!
+//! [`step`] is deliberately naive (a smoke test and baseline);
+//! [`smart::step`] plays reasonably well and is meant for balancing.
+
+pub mod smart;
 
 use crate::combat::needs_target;
 use crate::content::GameData;
@@ -66,8 +70,21 @@ pub fn step(run: &mut Run, data: &GameData) -> Result<(), ActionError> {
     }
 }
 
-/// Plays a whole run with [`step`] until victory, defeat or [`MAX_STEPS`].
+/// Plays a whole run with the naive [`step`] until victory, defeat or [`MAX_STEPS`].
 pub fn play_run(data: &GameData, character: &str, seed: u64) -> Result<Run, ActionError> {
+    play_run_with(data, character, seed, step)
+}
+
+/// One bot action; see [`step`] and [`smart::step`].
+pub type StepFn = fn(&mut Run, &GameData) -> Result<(), ActionError>;
+
+/// Plays a whole run with any step function.
+pub fn play_run_with(
+    data: &GameData,
+    character: &str,
+    seed: u64,
+    step: StepFn,
+) -> Result<Run, ActionError> {
     let mut run = Run::new(data, character, seed)?;
     for _ in 0..MAX_STEPS {
         if run.is_over() {
