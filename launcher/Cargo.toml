@@ -1,0 +1,10 @@
+[package]
+name = "launcher"
+description = "Standalone start program: serves the built web game on localhost and opens the browser."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "verlorene-lande"
+path = "src/main.rs"

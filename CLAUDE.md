@@ -9,6 +9,7 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `engine/`: reine Spiellogik (Zufall mit Seed, Karten, später Kampf, Ausrüstung, Karte, Turm). Baut nativ und nach `wasm32-unknown-unknown`.
 - `ui/`: Leptos-Oberfläche (CSR), gebaut mit Trunk. `ui/index.html` ist der Trunk-Einstieg.
 - `sim/`: natives Kommandozeilenprogramm für die Bot-Simulation.
+- `launcher/`: Standalone-Startprogramm (siehe Befehle).
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.
 
 Die Portierung bleibt regeltreu zum Prototyp. Bewusste Abweichungen tragen im Code den Kommentar `Fix:`.
@@ -25,7 +26,11 @@ cargo run --release -p sim  # Simulation: Smart-Bot, 300 Läufe je Charakter
 cargo run --release -p sim -- --bot naive --runs 500 --seed 1000
 trunk serve                 # Dev-Server, aus dem Workspace-Root
 trunk build --release       # fertige Dateien in dist/
+.\build.ps1                 # Standalone: out/Verlorene-Lande.exe und out/Verlorene-Lande-Debug.exe
+.\build.ps1 -Only debug     # nur die Debug-Version
 ```
+
+`launcher/` ist das Startprogramm: ein kleiner Webserver nur mit std, der den Trunk-Build (per `build.rs` eingebettet, `VL_WEB_DIR`) auf 127.0.0.1 ausliefert und den Browser öffnet. Debug-Builds (`trunk serve`, `trunk build` ohne `--release`) zeigen ein Debug-Panel (`ui/src/debug.rs`, `cfg(debug_assertions)`), das die `Run::debug_*`-Aktionen aus `engine/src/run/debug.rs` aufruft. Bots und `sim` rufen die nie auf.
 
 ## Sprache
 

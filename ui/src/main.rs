@@ -3,6 +3,8 @@
 //! All game rules live in `engine`. This crate keeps the current [`Run`] in a
 //! signal, renders its phase and forwards clicks as engine actions.
 
+#[cfg(debug_assertions)]
+mod debug;
 mod text;
 mod views;
 
@@ -55,6 +57,10 @@ impl Game {
     pub fn start_run(self, character: &str) {
         // Random seed; the end screen shows it so runs can be reproduced.
         let seed = (js_sys::Math::random() * 9_007_199_254_740_992.0) as u64;
+        self.start_run_with_seed(character, seed);
+    }
+
+    pub fn start_run_with_seed(self, character: &str, seed: u64) {
         match Run::new(data(), character, seed) {
             Ok(run) => {
                 self.selected.set(None);
@@ -121,5 +127,15 @@ fn App() -> impl IntoView {
         .into_any();
     }
     let game = Game::new();
-    view! { <div class="root">{move || views::screen(game)}</div> }.into_any()
+    #[cfg(debug_assertions)]
+    let debug = debug::panel(game);
+    #[cfg(not(debug_assertions))]
+    let debug = ();
+    view! {
+        <div class="root">
+            {move || views::screen(game)}
+            {debug}
+        </div>
+    }
+    .into_any()
 }

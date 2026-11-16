@@ -175,3 +175,14 @@ button.card:disabled { opacity: .42; cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01s !important; animation-iteration-count: 1 !important; transition: none !important; }
 }
+
+/* Debug panel (debug builds only) */
+.debug { position: fixed; right: 12px; bottom: 12px; z-index: 1000; font-size: 13px; }
+.debug-toggle { background: #3a1f1f; color: #ffd9c9; border: 1px solid #a8463a; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.debug.open .debug-toggle { float: right; }
+.debug-body { clear: both; margin-top: 6px; background: rgba(14, 17, 19, 0.96); border: 1px solid #a8463a; border-radius: 8px; padding: 10px; width: 520px; display: flex; flex-direction: column; gap: 8px; }
+.debug-info { color: #ebe6d8; opacity: 0.8; }
+.debug-row { display: flex; gap: 6px; }
+.debug-row select, .debug-row input { flex: 1; min-width: 0; background: #1b2124; color: #ebe6d8; border: 1px solid #4a5a60; border-radius: 4px; padding: 3px 6px; }
+.debug-row button { background: #2a3034; color: #ebe6d8; border: 1px solid #4a5a60; border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+.debug-row button:hover { border-color: #e3b95a; }
