@@ -149,6 +149,81 @@ impl Card {
     pub fn has_tag(&self, tag: Tag) -> bool {
         self.tags.contains(&tag)
     }
+
+    /// Whether the card can be upgraded at all (prototype `upgradable`, minus the
+    /// "already upgraded" check, which belongs to [`CardInstance`]).
+    pub fn is_upgradable(&self) -> bool {
+        self.rarity != Rarity::Junk
+    }
+
+    /// The upgraded version of this card (prototype `stats` with `c.up`).
+    ///
+    /// Damage and block grow by 40 % rounded up; poison, heal, strength, thorns,
+    /// weak and vulnerable grow by fixed amounts. If none of these apply, the
+    /// card instead costs 1 less, or loses Exhaust, or gives 1 more energy.
+    pub fn upgraded(&self) -> Card {
+        let mut c = self.clone();
+        let e = &mut c.effects;
+        let mut changed = false;
+        // ceil(x * 1.4) in integers; checked against the prototype's float math.
+        let grow = |x: &mut u32, changed: &mut bool| {
+            if *x > 0 {
+                *x = (*x * 14).div_ceil(10);
+                *changed = true;
+            }
+        };
+        let add = |x: &mut u32, n: u32, changed: &mut bool| {
+            if *x > 0 {
+                *x += n;
+                *changed = true;
+            }
+        };
+        grow(&mut e.damage, &mut changed);
+        grow(&mut e.block, &mut changed);
+        add(&mut e.poison, 2, &mut changed);
+        add(&mut e.heal, 3, &mut changed);
+        add(&mut e.strength, 1, &mut changed);
+        add(&mut e.thorns, 2, &mut changed);
+        add(&mut e.weak, 1, &mut changed);
+        add(&mut e.vulnerable, 1, &mut changed);
+        if !changed {
+            if c.cost > 0 {
+                c.cost -= 1;
+            } else if e.exhaust {
+                e.exhaust = false;
+            } else if e.energy > 0 {
+                e.energy += 1;
+            }
+        }
+        c
+    }
+}
+
+/// A card in a deck or pile: a reference to its definition plus upgrade state.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CardInstance {
+    pub id: String,
+    #[serde(default)]
+    pub upgraded: bool,
+}
+
+impl CardInstance {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            upgraded: false,
+        }
+    }
+
+    /// Effective card values, with the upgrade applied. `None` if the id is unknown.
+    pub fn resolve(&self, db: &CardDb) -> Option<Card> {
+        let base = db.get(&self.id)?;
+        Some(if self.upgraded {
+            base.upgraded()
+        } else {
+            base.clone()
+        })
+    }
 }
 
 /// Error while loading card data.
@@ -201,6 +276,11 @@ impl CardDb {
     /// Parses and validates a JSON array of cards.
     pub fn from_json(json: &str) -> Result<Self, CardLoadError> {
         let cards: Vec<Card> = serde_json::from_str(json).map_err(CardLoadError::Json)?;
+        Self::from_cards(cards)
+    }
+
+    /// Validates already parsed cards (useful for tests and generated content).
+    pub fn from_cards(cards: Vec<Card>) -> Result<Self, CardLoadError> {
         for (i, card) in cards.iter().enumerate() {
             validate(card)?;
             if cards[..i].iter().any(|c| c.id == card.id) {
@@ -274,11 +354,54 @@ mod tests {
     #[test]
     fn builtin_cards_load() {
         let db = CardDb::builtin().expect("data/cards.json must be valid");
-        assert!(
-            (5..=8).contains(&db.len()),
-            "M0 expects 5 to 8 cards, got {}",
-            db.len()
+        for id in ["strike", "defend", "bash", "burn", "frost"] {
+            assert!(db.get(id).is_some(), "combat needs card '{id}'");
+        }
+    }
+
+    fn card(effects: &str, cost: u8) -> Card {
+        let json = format!(
+            r#"[{{"id":"x","name":"X","kind":"skill","cost":{cost},"rarity":"common","tags":["draw"],"effects":{effects}}}]"#
         );
+        CardDb::from_json(&json).unwrap().cards()[0].clone()
+    }
+
+    #[test]
+    fn upgrade_matches_prototype_numbers() {
+        let db = CardDb::builtin().unwrap();
+        let up = |id: &str| db.get(id).unwrap().upgraded();
+        assert_eq!(up("strike").effects.damage, 9); // ceil(6 * 1.4)
+        assert_eq!(up("defend").effects.block, 7); // ceil(5 * 1.4)
+        assert_eq!(up("heavy").effects.damage, 20); // 14 * 1.4 = 19.6
+        let bash = up("bash");
+        assert_eq!((bash.effects.damage, bash.effects.vulnerable), (12, 3));
+        let venom = up("venom");
+        assert_eq!((venom.effects.damage, venom.effects.poison), (5, 6));
+        // Exact multiples of 5 must not round up (float trap in the prototype).
+        assert_eq!(card(r#"{"block":25}"#, 3).upgraded().effects.block, 35);
+    }
+
+    #[test]
+    fn upgrade_fallbacks_without_numbers() {
+        // Schildhieb: no number to grow, so it costs 1 less.
+        let slam = CardDb::builtin().unwrap().get("slam").unwrap().upgraded();
+        assert_eq!(slam.cost, 0);
+        // Sammeln (cost 0, exhaust, energy): loses exhaust.
+        let focus = card(r#"{"energy":1,"exhaust":true}"#, 0).upgraded();
+        assert!(!focus.effects.exhaust);
+        assert_eq!(focus.effects.energy, 1);
+        // Cost 0 without exhaust but with energy: +1 energy.
+        assert_eq!(card(r#"{"energy":2}"#, 0).upgraded().effects.energy, 3);
+    }
+
+    #[test]
+    fn instance_resolves_with_upgrade() {
+        let db = CardDb::builtin().unwrap();
+        let mut c = CardInstance::new("strike");
+        assert_eq!(c.resolve(&db).unwrap().effects.damage, 6);
+        c.upgraded = true;
+        assert_eq!(c.resolve(&db).unwrap().effects.damage, 9);
+        assert!(CardInstance::new("nope").resolve(&db).is_none());
     }
 
     #[test]

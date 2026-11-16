@@ -53,6 +53,34 @@ impl GameRng {
             }
         }
     }
+
+    /// Uniform index in `0..len`.
+    ///
+    /// # Panics
+    /// Panics if `len` is 0 or does not fit into `i32`.
+    pub fn index(&mut self, len: usize) -> usize {
+        assert!(len > 0, "GameRng::index: empty range");
+        let hi = i32::try_from(len - 1).expect("GameRng::index: len too large");
+        self.range(0, hi) as usize
+    }
+
+    /// Random element of a slice, `None` if it is empty (prototype `pick`).
+    pub fn pick<'a, T>(&mut self, items: &'a [T]) -> Option<&'a T> {
+        if items.is_empty() {
+            None
+        } else {
+            Some(&items[self.index(items.len())])
+        }
+    }
+
+    /// Fisher-Yates shuffle in place, same order of draws as the prototype:
+    /// walks from the last element down to index 1.
+    pub fn shuffle<T>(&mut self, items: &mut [T]) {
+        for i in (1..items.len()).rev() {
+            let j = self.index(i + 1);
+            items.swap(i, j);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -123,6 +151,40 @@ mod tests {
         }
         // Full i32 range must not overflow.
         rng.range(i32::MIN, i32::MAX);
+    }
+
+    #[test]
+    fn shuffle_is_a_deterministic_permutation() {
+        let mut a: Vec<u32> = (0..20).collect();
+        let mut b = a.clone();
+        GameRng::new(5).shuffle(&mut a);
+        GameRng::new(5).shuffle(&mut b);
+        assert_eq!(a, b);
+        assert_ne!(a, (0..20).collect::<Vec<_>>());
+        let mut sorted = a.clone();
+        sorted.sort();
+        assert_eq!(sorted, (0..20).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn shuffle_handles_tiny_slices() {
+        let mut rng = GameRng::new(1);
+        let mut empty: [u8; 0] = [];
+        rng.shuffle(&mut empty);
+        let mut one = [7];
+        rng.shuffle(&mut one);
+        assert_eq!(one, [7]);
+    }
+
+    #[test]
+    fn pick_returns_element_or_none() {
+        let mut rng = GameRng::new(11);
+        let items = ["a", "b", "c"];
+        for _ in 0..100 {
+            assert!(items.contains(rng.pick(&items).unwrap()));
+        }
+        let empty: [&str; 0] = [];
+        assert!(rng.pick(&empty).is_none());
     }
 
     #[test]

@@ -18,6 +18,15 @@
     "effects": { "block": 5 }
   },
   {
+    "id": "bash",
+    "name": "Schildstoß",
+    "kind": "attack",
+    "cost": 2,
+    "rarity": "starter",
+    "tags": ["slash"],
+    "effects": { "damage": 8, "vulnerable": 2 }
+  },
+  {
     "id": "heavy",
     "name": "Wuchtschlag",
     "kind": "attack",
@@ -70,5 +79,23 @@
     "rarity": "uncommon",
     "tags": ["block", "draw"],
     "effects": { "block": 4, "draw": 2 }
+  },
+  {
+    "id": "burn",
+    "name": "Brand",
+    "kind": "status",
+    "cost": 0,
+    "rarity": "junk",
+    "tags": [],
+    "effects": { "unplayable": true, "burn": true }
+  },
+  {
+    "id": "frost",
+    "name": "Frost",
+    "kind": "status",
+    "cost": 0,
+    "rarity": "junk",
+    "tags": [],
+    "effects": { "unplayable": true, "ethereal": true }
   }
 ]
