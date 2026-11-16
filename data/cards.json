@@ -7,5 +7,68 @@
     "rarity": "starter",
     "tags": ["slash"],
     "effects": { "damage": 6 }
+  },
+  {
+    "id": "defend",
+    "name": "Block",
+    "kind": "skill",
+    "cost": 1,
+    "rarity": "starter",
+    "tags": ["block"],
+    "effects": { "block": 5 }
+  },
+  {
+    "id": "heavy",
+    "name": "Wuchtschlag",
+    "kind": "attack",
+    "cost": 2,
+    "rarity": "uncommon",
+    "tags": ["slash"],
+    "effects": { "damage": 14 }
+  },
+  {
+    "id": "venom",
+    "name": "Giftpfeil",
+    "kind": "attack",
+    "cost": 1,
+    "rarity": "common",
+    "tags": ["poison", "throw"],
+    "effects": { "damage": 3, "poison": 4 }
+  },
+  {
+    "id": "guard",
+    "name": "Bollwerk",
+    "kind": "skill",
+    "cost": 2,
+    "rarity": "common",
+    "tags": ["block"],
+    "effects": { "block": 12 }
+  },
+  {
+    "id": "slam",
+    "name": "Schildhieb",
+    "kind": "attack",
+    "cost": 1,
+    "rarity": "common",
+    "tags": ["shield"],
+    "effects": { "block_damage": true }
+  },
+  {
+    "id": "cloud",
+    "name": "Giftwolke",
+    "kind": "skill",
+    "cost": 1,
+    "rarity": "uncommon",
+    "tags": ["poison", "area"],
+    "effects": { "poison": 4, "all_enemies": true }
+  },
+  {
+    "id": "plan",
+    "name": "Schlachtplan",
+    "kind": "skill",
+    "cost": 1,
+    "rarity": "uncommon",
+    "tags": ["block", "draw"],
+    "effects": { "block": 4, "draw": 2 }
   }
 ]
