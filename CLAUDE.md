@@ -11,6 +11,8 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `sim/`: natives Kommandozeilenprogramm für die Bot-Simulation.
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.
 
+Die Portierung bleibt regeltreu zum Prototyp, auch bei seinen Eigenheiten. Solche Stellen tragen im Code den Kommentar `Prototype quirk` und werden nur nach Absprache geändert.
+
 **Regel: engine kennt keine UI.** Keine Abhängigkeit auf leptos, web-sys, wasm-bindgen o. ä. in `engine`. Alle Zufallswürfe laufen über `engine::GameRng` (ChaCha8 mit Seed), nie über andere Zufallsquellen.
 
 ## Befehle
