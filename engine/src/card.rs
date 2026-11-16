@@ -113,6 +113,8 @@ pub struct Effects {
     pub vulnerable: u32,
     /// `thorns`
     pub thorns: u32,
+    /// Blutung on the target (not in the prototype, replaces `dblpsn` on Ausbluten).
+    pub bleed: u32,
     /// `str`
     pub strength: u32,
     /// `heal`
@@ -202,6 +204,7 @@ impl Card {
         add(&mut e.heal, 3, &mut changed);
         add(&mut e.strength, 1, &mut changed);
         add(&mut e.thorns, 2, &mut changed);
+        add(&mut e.bleed, 2, &mut changed);
         add(&mut e.weak, 1, &mut changed);
         add(&mut e.vulnerable, 1, &mut changed);
         if !changed {

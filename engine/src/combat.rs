@@ -51,12 +51,16 @@ pub struct Statuses {
     pub poison: u32,
     /// Dornen: attackers take this much damage per hit (player only).
     pub thorns: u32,
+    /// Blutung: loses this much HP after each of its own attacks, ignoring
+    /// block; drops by 1 at the end of its turn (enemies only).
+    pub bleed: u32,
 }
 
 impl Statuses {
     fn tick_debuffs(&mut self) {
         self.weak = self.weak.saturating_sub(1);
         self.vulnerable = self.vulnerable.saturating_sub(1);
+        self.bleed = self.bleed.saturating_sub(1);
     }
 
     /// Applies poison damage to `hp` and lowers poison by 1. Ignores block.
@@ -109,6 +113,7 @@ pub fn needs_target(card: &Card) -> bool {
         || e.poison > 0
         || e.weak > 0
         || e.vulnerable > 0
+        || e.bleed > 0
         || e.double_poison)
         && !e.all_enemies
 }
@@ -191,6 +196,8 @@ pub enum LogEntry {
     Burn { hp_lost: i32 },
     /// Thorns hit an attacker.
     Thorns { enemy: usize, damage: i32 },
+    /// A bleeding enemy lost HP after its attack.
+    Bleed { enemy: usize, damage: i32 },
     /// An enemy died.
     EnemyDied { enemy: usize },
 }
@@ -487,6 +494,7 @@ impl Combat {
             enemy.status.poison += e.poison;
             enemy.status.weak += e.weak;
             enemy.status.vulnerable += e.vulnerable;
+            enemy.status.bleed += e.bleed;
             if e.double_poison {
                 enemy.status.poison *= 2;
             }
@@ -706,6 +714,20 @@ impl Combat {
                     }
                 }
                 self.push_log(LogEntry::EnemyAttack { enemy: i, hp_lost });
+                // Bleeding: every own attack opens the wound again.
+                let damage = self.enemies[i].status.bleed as i32;
+                if damage > 0 && !self.enemies[i].dead {
+                    let enemy = &mut self.enemies[i];
+                    enemy.hp -= damage;
+                    let died = enemy.hp <= 0;
+                    if died {
+                        enemy.dead = true;
+                    }
+                    self.push_log(LogEntry::Bleed { enemy: i, damage });
+                    if died {
+                        self.push_log(LogEntry::EnemyDied { enemy: i });
+                    }
+                }
             }
             if self.enemies[i].dead {
                 self.check();

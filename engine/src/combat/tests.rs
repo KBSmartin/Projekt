@@ -10,6 +10,7 @@ const TEST_CARDS: &str = r#"[
   {"id":"whirl","name":"Wirbel","kind":"attack","cost":1,"rarity":"common","tags":["slash","area"],"effects":{"damage":5,"all_enemies":true}},
   {"id":"venom","name":"Giftpfeil","kind":"attack","cost":1,"rarity":"common","tags":["poison","throw"],"effects":{"damage":3,"poison":4}},
   {"id":"decay","name":"Ausbluten","kind":"skill","cost":1,"rarity":"rare","tags":["poison"],"effects":{"double_poison":true}},
+  {"id":"cut","name":"Ausbluten","kind":"attack","cost":1,"rarity":"rare","tags":["throw"],"effects":{"damage":3,"bleed":5}},
   {"id":"slam","name":"Schildhieb","kind":"attack","cost":1,"rarity":"common","tags":["shield"],"effects":{"block_damage":true}},
   {"id":"thorn","name":"Dornenpanzer","kind":"skill","cost":1,"rarity":"common","tags":["block"],"effects":{"block":4,"thorns":3}},
   {"id":"warcry","name":"Kriegsruf","kind":"power","cost":1,"rarity":"uncommon","tags":["slash"],"effects":{"strength":2}},
@@ -776,4 +777,35 @@ fn greedy_fights_always_end() {
         }
         assert!(c.is_over(), "seed {seed} did not finish");
     }
+}
+
+#[test]
+fn bleed_hurts_the_enemy_after_each_of_its_attacks() {
+    let (mut c, mut rng) = start(&["dummy"]);
+    set_hand(&mut c, &["cut"]);
+    play(&mut c, &mut rng, 0, Some(0));
+    assert_eq!((c.enemies[0].hp, c.enemies[0].status.bleed), (37, 5));
+    c.end_turn(&cards(), &mut rng).unwrap();
+    // Attacked once: loses 5, then the bleeding drops to 4.
+    assert_eq!((c.enemies[0].hp, c.enemies[0].status.bleed), (32, 4));
+    assert!(c.log.contains(&LogEntry::Bleed { enemy: 0, damage: 5 }));
+}
+
+#[test]
+fn bleed_only_triggers_on_attacks_but_still_wears_off() {
+    let (mut c, mut rng) = start(&["idle"]);
+    set_hand(&mut c, &["cut"]);
+    play(&mut c, &mut rng, 0, Some(0));
+    c.end_turn(&cards(), &mut rng).unwrap();
+    assert_eq!((c.enemies[0].hp, c.enemies[0].status.bleed), (17, 4));
+}
+
+#[test]
+fn bleed_can_win_the_fight() {
+    let (mut c, mut rng) = start(&["dummy"]);
+    c.enemies[0].hp = 4;
+    c.enemies[0].status.bleed = 5;
+    set_hand(&mut c, &[]);
+    c.end_turn(&cards(), &mut rng).unwrap();
+    assert_eq!(c.outcome, Some(Outcome::Win));
 }

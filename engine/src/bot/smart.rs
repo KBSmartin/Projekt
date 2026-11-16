@@ -184,7 +184,10 @@ fn evaluate(combat: &Combat, data: &GameData) -> f64 {
         .enemies
         .iter()
         .filter(|e| !e.dead)
-        .map(|e| f64::from(e.hp) - poison_left(e.status.poison, e.hp) + f64::from(e.block) * 0.3)
+        .map(|e| {
+            f64::from(e.hp) - poison_left(e.status.poison, e.hp) - poison_left(e.status.bleed, e.hp) * 0.6
+                + f64::from(e.block) * 0.3
+        })
         .sum();
     let p = &sim.player;
     match sim.outcome {
@@ -234,6 +237,8 @@ pub fn card_value(card: &Card, bonus: &CombatBonus) -> f64 {
     let mut v = damage * f64::from(e.hits.max(1)) * area;
     v += block * 0.8;
     v += f64::from(e.poison) * 1.6 * area;
+    // Bleeding only triggers on attacks, so it is worth a bit less than poison.
+    v += f64::from(e.bleed) * 1.4 * area;
     v += f64::from(e.weak) * 2.5 * area;
     v += f64::from(e.vulnerable) * 3.0 * area;
     v += f64::from(e.thorns) * 2.5;

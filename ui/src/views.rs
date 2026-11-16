@@ -302,7 +302,7 @@ fn card_inner(card: &Card, upgraded: bool, damage: i32, block: i32) -> AnyView {
         .collect::<Vec<_>>()
         .join(" · ");
     // Long names get a smaller font and may wrap in the banner.
-    let name_class = if name.chars().count() > 10 { "cn long" } else { "cn" };
+    let name_class = if name.chars().count() > 9 { "cn long" } else { "cn" };
     let type_line = if tags.is_empty() {
         card.kind.name().to_string()
     } else {
@@ -681,6 +681,7 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
                     <p>
                         "💪 Stärke: +1 Schaden pro Punkt bei jedem Angriff · 🥀 Schwäche: 25 % weniger Schaden · "
                         "🎯 Verwundbar: 50 % mehr Schaden erlitten · 🧪 Gift: verliert zu Rundenbeginn LP, dann sinkt es um 1 · "
+                        "🩸 Blutung: Gegner verliert nach jedem eigenen Angriff LP, sinkt jede Runde um 1 · "
                         "🌵 Dornen: Angreifer erleiden Schaden · 🛡️ Block: hält Schaden ab, verfällt zu Rundenbeginn"
                     </p>
                 </details>

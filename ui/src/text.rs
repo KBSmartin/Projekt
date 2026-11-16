@@ -30,6 +30,9 @@ pub fn card_text(card: &Card, damage: i32, block: i32) -> String {
     if e.double_poison {
         parts.push("Verdopple das Gift des Ziels.".into());
     }
+    if e.bleed > 0 {
+        parts.push(format!("{} Blutung.", e.bleed));
+    }
     if e.weak > 0 {
         parts.push(format!("Schwäche {}.", e.weak));
     }
@@ -167,6 +170,11 @@ pub fn status_chips(s: &Statuses) -> Vec<(&'static str, i32, &'static str)> {
         "Gift: verliert zu Rundenbeginn LP, danach sinkt das Gift um 1",
     );
     add(
+        s.bleed as i32,
+        "🩸",
+        "Blutung: verliert nach jedem eigenen Angriff so viele LP, danach sinkt die Blutung jede Runde um 1",
+    );
+    add(
         s.thorns as i32,
         "🌵",
         "Dornen: wer dich angreift, erleidet Schaden",
@@ -239,6 +247,9 @@ pub fn log_line(entry: &LogEntry, combat: &Combat) -> String {
         LogEntry::Burn { hp_lost } => format!("Brand: {hp_lost} Schaden."),
         LogEntry::Thorns { enemy, damage } => {
             format!("Dornen treffen {} für {damage}.", name(enemy))
+        }
+        LogEntry::Bleed { enemy, damage } => {
+            format!("{} blutet und verliert {damage}.", name(enemy))
         }
         LogEntry::EnemyDied { enemy } => format!("{} fällt.", name(enemy)),
     }

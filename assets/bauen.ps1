@@ -3,6 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 & (Join-Path $here 'karten\karten.ps1')
+& (Join-Path $here 'karten\rahmen.ps1')
 & (Join-Path $here 'portraets\animationen.ps1')
 $bg = Join-Path $here '..\ui\assets\hintergrund'
 New-Item -ItemType Directory -Force $bg | Out-Null

@@ -13,7 +13,9 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `assets/`: Quellen der Grafiken, `assets/bauen.ps1` erzeugt alle neu und kopiert sie nach `ui/assets/`.
   - `portraets/basis/*.txt`: Porträts als Textraster (ein Zeichen pro Pixel, Palette im Kopf); `portraets/animationen.ps1` baut daraus die Spritesheets (Frames nebeneinander).
   - `karten/karten.ps1`: ein 8 × 8-Symbol pro Karte (`ui/assets/karten/<id>.png`, im Spiel 6-fach), von Hand als Raster mit gemeinsamer Palette. Eine neue Karte braucht dort einen Eintrag, sonst bricht das Skript ab.
-- Kartendesign (CSS): Rahmenform und Farbe nach Typ (Angriff abgeschrägte Ecken, Fertigkeit rund, Kraft Bogen, Status gestrichelt), Hintergrundtönung nach Klasse, Rahmen und Edelstein nach Seltenheit.
+  - `karten/rahmen.ps1`: 8-Bit-Pixelrahmen je Kartentyp (12 × 12, als CSS `border-image` 2-fach).
+- Kartendesign im 8-Bit-Stil: Pixelrahmen je Typ (Angriff abgeschrägt, Fertigkeit gerundet, Kraft mit Goldnieten, Status angeschlagen), geditherter Hintergrund nach Klasse, Bildrahmen und Edelstein nach Seltenheit, Pixelschriften „Pixelify Sans“ (Namen) und „VT323“ (Texte, Zahlen).
+- Blutung (`Statuses::bleed`, Karteneffekt `bleed`): neu, nicht aus dem Prototyp. Ein Gegner mit Blutung X verliert nach jedem eigenen Angriff X LP (Block hilft nicht); am Ende seines Zuges sinkt die Blutung um 1. Ausbluten (Schütze, selten) ist dafür ein Wurf-Angriff mit 3 Schaden und 5 Blutung statt „Gift verdoppeln“.
   - `hintergrund/{wald,wueste,festung}.ps1`: ein Hintergrund pro Gebiet (CSS-Klasse `bg-<region-id>`), gemeinsame Helfer in `pixel.ps1`.
   - Die fertigen PNGs in `ui/assets/` sind eingecheckt und werden von Trunk mitkopiert. Die Skripte brauchen Windows-PowerShell (System.Drawing).
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.

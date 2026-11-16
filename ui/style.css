@@ -134,63 +134,66 @@ svg.map { width: 100%; height: auto; display: block; }
 .hint { text-align: center; color: var(--acc); font-weight: 700; margin-top: 6px; }
 .hand { display: flex; gap: 12px; padding: 20px 8px 12px; justify-content: center; min-height: 216px; flex-wrap: wrap; }
 
-/* Cards. Frame shape and colour by type (--ct), background tint by owning
-   character (--oc), trim and gem by rarity (--rc). Icons are 8x8, shown 6x. */
+/* Cards, 8-bit style: pixel frame per type (border-image, 12x12 shown 2x),
+   flat colours, dithered background tinted by the owning character (--oc),
+   trim and gem by rarity (--rc), pixel font. Icons are 8x8, shown 6x. */
 .card {
-  position: relative; flex: 0 0 132px; width: 132px; height: 196px; padding: 0 0 14px;
+  --px: 2px;
+  position: relative; flex: 0 0 132px; width: 132px; height: 196px; padding: 0 0 12px;
   display: flex; flex-direction: column; text-align: left; color: var(--ink);
-  background:
-    radial-gradient(120% 55% at 50% 0%, color-mix(in srgb, var(--oc) 80%, transparent), transparent 75%),
-    repeating-linear-gradient(45deg, #ffffff06 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, #1d1a1f, #110f13);
-  border: 2px solid var(--rc); border-radius: 10px;
-  box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px color-mix(in srgb, var(--ct) 75%, #000), 0 4px 10px #0009;
-  transition: transform .15s, box-shadow .15s, filter .15s;
+  font-family: 'Pixelify Sans', var(--fb);
+  border: 8px solid transparent; border-image: url(assets/karten/rahmen_s.png) 4 / 8px stretch;
+  background: repeating-conic-gradient(var(--oc) 0 25%, #141016 0 50%) 0 0 / 4px 4px;
+  background-clip: padding-box; image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 #0008);
+  transition: transform .12s steps(3);
 }
-button.card:hover:not(:disabled) { transform: translateY(-8px); filter: brightness(1.08); }
-.card.sel { transform: translateY(-16px); box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px var(--ct), 0 0 0 2px var(--acc), 0 10px 22px #000a; }
-button.card:disabled { opacity: .42; cursor: default; }
+button.card:hover:not(:disabled) { transform: translateY(-8px); }
+.card.sel { transform: translateY(-16px); outline: 2px solid var(--acc); outline-offset: 2px; }
+button.card:disabled { opacity: .45; cursor: default; }
 .cost {
-  position: absolute; z-index: 2; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe9a8, var(--gold) 60%, #8a6a20); color: #251a05;
-  font-family: var(--fd); font-weight: 800; font-size: 1.05rem; display: grid; place-items: center;
-  border: 2px solid #0a0809;
+  position: absolute; z-index: 2; top: -4px; left: -4px; width: 24px; height: 24px;
+  background: #d8a038; color: #251a05; border: 2px solid #0a0809;
+  box-shadow: inset 2px 2px 0 #f8e08a, inset -2px -2px 0 #8a5a1a;
+  clip-path: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px), 0 2px, 2px 2px);
+  font-family: 'VT323', monospace; font-size: 1.35rem; line-height: 1; display: grid; place-items: center;
 }
 .cn {
-  margin: 6px 6px 0 14px; padding: 3px 8px 3px 18px; min-height: 22px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ct) 85%, #fff2), color-mix(in srgb, var(--ct) 60%, #000));
-  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);
-  font-family: var(--fd); font-weight: 700; font-size: .98rem; line-height: 1.05; color: #fff6e6; text-shadow: 0 1px 0 #0008;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin: 0 0 0 20px; padding: 3px 6px; min-height: 20px;
+  background: var(--ct); box-shadow: inset 0 2px 0 #ffffff40, inset 0 -2px 0 #00000059;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 0 100%);
+  font-weight: 700; font-size: .9rem; line-height: 1.05; color: #fff6e6; text-shadow: 1px 1px 0 #000;
+  white-space: nowrap; overflow: hidden;
 }
-.cn.long { font-size: .8rem; line-height: .95; white-space: normal; padding-top: 3px; padding-bottom: 2px; display: flex; align-items: center; }
+.cn.long { font-size: .7rem; line-height: 1; white-space: normal; display: flex; align-items: center; letter-spacing: -.02em; }
 .art {
-  margin: 5px 9px 0; height: 58px; display: grid; place-items: center; border: 1px solid var(--rc); border-radius: 4px;
-  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ct) 55%, transparent), transparent 70%), #0b0a0d;
-  box-shadow: inset 0 0 0 1px #000, inset 0 0 14px #000d;
+  margin: 4px 4px 0; height: 58px; display: grid; place-items: center;
+  border: 2px solid var(--rc); box-shadow: inset 0 0 0 2px #000;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--ct) 22%, #0b0a0d) 0 25%, #0b0a0d 0 50%) 0 0 / 4px 4px;
 }
-.art img { width: 48px; height: 48px; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #000a); }
-.ct { margin-top: 4px; text-align: center; font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: color-mix(in srgb, var(--ct) 45%, #fff); }
-.cx { flex: 1; margin: 3px 9px 0; font-size: .78rem; line-height: 1.18; color: #e4ddcc; text-align: center; }
-.gem { position: absolute; bottom: 5px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%) rotate(45deg); background: var(--rc); box-shadow: 0 0 0 1px #000, 0 0 6px var(--rc); }
+.art img { width: 48px; height: 48px; image-rendering: pixelated; }
+.ct { margin-top: 3px; text-align: center; font-family: 'VT323', monospace; font-size: .85rem; line-height: .9; text-transform: uppercase; letter-spacing: .05em; color: color-mix(in srgb, var(--ct) 40%, #fff); }
+.cx { flex: 1; margin: 2px 4px 0; font-family: 'VT323', monospace; font-size: 1.02rem; line-height: .95; color: #efe6d2; text-align: center; text-shadow: 1px 1px 0 #000; }
+.gem {
+  position: absolute; bottom: 1px; left: calc(50% - 4px); width: 8px; height: 8px; background: var(--rc);
+  clip-path: polygon(2px 0, 6px 0, 6px 2px, 8px 2px, 8px 6px, 6px 6px, 6px 8px, 2px 8px, 2px 6px, 0 6px, 0 2px, 2px 2px);
+}
 
-/* Type: attack has cut corners, power an arched top, status looks worn. */
-.t-a { --ct: var(--atk); border-radius: 3px; clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px); }
-.t-s { --ct: var(--skl); }
-.t-p { --ct: var(--pow); border-radius: 48px 48px 10px 10px / 30px 30px 10px 10px; }
-.t-p .cn { margin-top: 12px; }
-.t-x { --ct: var(--junk); border-style: dashed; filter: saturate(.6); }
-/* Owner. */
-.o-warrior { --oc: #6a2a1c; }
-.o-marksman { --oc: #1f4f2a; }
-.o-mage { --oc: #35226a; }
-.o-neutral { --oc: #3a3a44; }
+/* Type: own frame and colour. */
+.t-a { --ct: #b02a2a; border-image-source: url(assets/karten/rahmen_a.png); }
+.t-s { --ct: #2f68c0; border-image-source: url(assets/karten/rahmen_s.png); }
+.t-p { --ct: #6a32a4; border-image-source: url(assets/karten/rahmen_p.png); }
+.t-x { --ct: #5a5a66; border-image-source: url(assets/karten/rahmen_x.png); filter: saturate(.5) drop-shadow(0 4px 0 #0008); }
+/* Owner: tint of the dithered background. */
+.o-warrior { --oc: #2c1410; }
+.o-marksman { --oc: #10241a; }
+.o-mage { --oc: #1e1434; }
+.o-neutral { --oc: #1e1e24; }
 /* Rarity. */
 .r-start { --rc: #6e6a72; }
 .r-common { --rc: #a8743e; }
 .r-uncommon { --rc: #a8c8e4; }
 .r-rare { --rc: #f0c050; }
-.r-rare { box-shadow: inset 0 0 0 2px #0a0809, inset 0 0 0 3px color-mix(in srgb, var(--ct) 75%, #000), 0 0 12px #f0c05066, 0 4px 10px #0009; }
 .r-junk { --rc: #4a4a50; }
 .card.up .cn { color: #c8ffb8; }
 .grid { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; padding: 14px 0; }

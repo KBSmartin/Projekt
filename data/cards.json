@@ -31,7 +31,7 @@
   { "id": "volley", "name": "Pfeilhagel", "icon": "🌧️", "character": "marksman", "kind": "attack", "cost": 1, "rarity": "uncommon", "tags": ["throw", "area"], "effects": { "damage": 4, "all_enemies": true } },
   { "id": "aimed", "name": "Gezielter Schuss", "icon": "🔭", "character": "marksman", "kind": "attack", "cost": 2, "rarity": "uncommon", "tags": ["throw"], "effects": { "damage": 10, "vulnerable": 2 } },
   { "id": "plague", "name": "Seuchenwolke", "icon": "☠️", "character": "marksman", "kind": "skill", "cost": 2, "rarity": "rare", "tags": ["poison", "area"], "effects": { "poison": 7, "all_enemies": true } },
-  { "id": "decay", "name": "Ausbluten", "icon": "🧫", "character": "marksman", "kind": "skill", "cost": 1, "rarity": "rare", "tags": ["poison"], "effects": { "double_poison": true } },
+  { "id": "decay", "name": "Ausbluten", "icon": "🩸", "character": "marksman", "kind": "attack", "cost": 1, "rarity": "rare", "tags": ["throw"], "effects": { "damage": 3, "bleed": 5 } },
   { "id": "deadshot", "name": "Meisterschuss", "icon": "🦅", "character": "marksman", "kind": "attack", "cost": 2, "rarity": "rare", "tags": ["throw"], "effects": { "damage": 22, "exhaust": true } },
 
   { "id": "spark", "name": "Funke", "icon": "✨", "character": "mage", "kind": "attack", "cost": 1, "rarity": "starter", "tags": ["spell"], "effects": { "damage": 5 } },

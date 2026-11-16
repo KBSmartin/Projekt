@@ -81,7 +81,7 @@ $icons = [ordered]@{
   'volley'      = 'b.......', '8..b....', '8..8..b.', '8..8..8.', '2..8..8.', '3..2..8.', '...3..2.', '......3.'
   'aimed'       = '...b....', '..uuuu..', '.uukkuu.', 'buk00kub', '.uukkuu.', '..uuuu..', '...b....', '........'
   'plague'      = '.eeeeee.', 'eeeeeeee', 'e00ee00e', 'e0fee0fe', 'eeee0eee', '.eeeeee.', '.e.ee.e.', 'd.d..d.d'
-  'decay'       = '...f....', '..efe...', '..eee...', '...e....', '.f...f..', 'efe.efe.', 'eee.eee.', '.e...e..'
+  'decay'       = '..b.....', '..b...b.', '.bcb..b.', '.bcbb.a.', 'bccbbb..', 'bcbbba..', '.bbaa...', '..aa....'
   'deadshot'    = '.bbbbb..', 'buuuuub.', 'bubbbub.', 'bubrb888', 'bubbbub.', 'buuuuub.', '.bbbbb..', '........'
   # mage
   'spark'       = '...r....', '...r....', '..r6r...', 'rr666rr.', '..r6r...', '...r....', '...r..r.', '.r......'
