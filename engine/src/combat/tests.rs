@@ -58,6 +58,7 @@ fn start_with(
         max_hp: 75,
         deck: &d,
         relics,
+        bonus: CombatBonus::default(),
     };
     let c = Combat::start(setup, kind, enemy_ids, &enemies(), &cards(), &mut rng).unwrap();
     (c, rng)
@@ -202,6 +203,7 @@ fn start_rejects_unknown_data() {
         max_hp: 75,
         deck: &d,
         relics: &[],
+        bonus: CombatBonus::default(),
     };
     let r = Combat::start(
         setup,
@@ -440,20 +442,135 @@ fn thorns_hurt_the_attacker_on_every_hit() {
 }
 
 #[test]
-fn player_vulnerable_drops_before_enemies_act() {
-    // Prototype quirk: 1 stack of vulnerable on the player has no effect.
+fn player_vulnerable_lasts_one_enemy_attack_per_stack() {
+    // Fix: in the prototype 1 stack dropped before the enemies acted.
     let (mut c, mut rng) = start(&["dummy"]);
     set_hand(&mut c, &[]);
     c.player.status.vulnerable = 1;
     end(&mut c, &mut rng);
-    assert_eq!(c.player.hp, 45);
+    assert_eq!(c.player.hp, 43, "floor(5 * 1.5)");
     assert_eq!(c.player.status.vulnerable, 0);
+}
 
+#[test]
+fn player_weak_from_enemy_weakens_the_next_player_turn() {
+    let (mut c, mut rng) = start(&["debuffer"]);
+    set_hand(&mut c, &[]);
+    end(&mut c, &mut rng);
+    // Weak 2 from an enemy weakens exactly the next two player turns.
+    c.enemies[0].def.moves = vec![Move::default()]; // no further debuffs
+    for turn in 0..3 {
+        set_hand(&mut c, &["strike"]);
+        let before = c.enemies[0].hp;
+        play(&mut c, &mut rng, 0, None);
+        let expected = if turn < 2 { 4 } else { 6 };
+        assert_eq!(before - c.enemies[0].hp, expected, "turn {turn}");
+        end(&mut c, &mut rng);
+    }
+}
+
+#[test]
+fn player_vulnerable_from_enemy_lasts_its_full_count() {
+    let (mut c, mut rng) = start(&["debuffer", "dummy"]);
+    // Debuffer acts first and applies vulnerable 2, so the dummy's hit in the
+    // same phase is already boosted; then two more full phases follow.
+    c.enemies[0].def.moves = vec![Move {
+        vulnerable: 2,
+        ..Move::default()
+    }];
+    set_hand(&mut c, &[]);
+    end(&mut c, &mut rng);
+    assert_eq!(c.player.hp, 43, "boosted in the applying phase");
+    assert_eq!(c.player.status.vulnerable, 2, "no stack lost yet");
+    c.enemies[0].def.moves = vec![Move::default()];
+    let mut losses = Vec::new();
+    for _ in 0..3 {
+        let before = c.player.hp;
+        set_hand(&mut c, &[]);
+        end(&mut c, &mut rng);
+        losses.push(before - c.player.hp);
+    }
+    assert_eq!(losses, vec![7, 7, 5]);
+}
+
+#[test]
+fn poison_win_is_not_lost_to_player_poison() {
+    // Fix: the prototype ticked the player's poison before noticing the win.
     let (mut c, mut rng) = start(&["dummy"]);
     set_hand(&mut c, &[]);
-    c.player.status.vulnerable = 2;
+    c.enemies[0].hp = 1;
+    c.enemies[0].status.poison = 3;
+    c.player.hp = 2;
+    c.player.status.poison = 5;
     end(&mut c, &mut rng);
-    assert_eq!(c.player.hp, 43, "floor(5 * 1.5)");
+    assert_eq!(c.outcome, Some(Outcome::Win));
+    assert_eq!(c.player.hp, 2);
+}
+
+#[test]
+fn character_bonus_applies() {
+    let mut rng = GameRng::new(1);
+    let d = deck(&["strike"; 10]);
+    let setup = CombatSetup {
+        hp: 50,
+        max_hp: 75,
+        deck: &d,
+        relics: &[Relic::Anchor],
+        bonus: CombatBonus {
+            start_block: 6,
+            extra_draw: 1,
+            tag_damage: Some((Tag::Slash, 2)),
+        },
+    };
+    let mut c = Combat::start(
+        setup,
+        CombatKind::Boss,
+        &["idle"],
+        &enemies(),
+        &cards(),
+        &mut rng,
+    )
+    .unwrap();
+    assert_eq!(c.player.block, 14, "6 + Anker 8");
+    assert_eq!(c.hand.len(), 6);
+    set_hand(&mut c, &["strike", "venom"]);
+    let strike = c.hand[0].resolve(&cards()).unwrap();
+    assert_eq!(c.card_damage(&strike, None), 8);
+    play(&mut c, &mut rng, 0, None);
+    assert_eq!(c.enemies[0].hp, 12, "Hieb +2");
+    play(&mut c, &mut rng, 0, None);
+    assert_eq!(c.enemies[0].hp, 9, "Giftpfeil has no Hieb tag");
+}
+
+#[test]
+fn intent_damage_includes_statuses() {
+    let (mut c, _) = start(&["dummy"]);
+    assert_eq!(c.intent_damage(0), Some(5));
+    c.enemies[0].status.strength = 2;
+    c.player.status.vulnerable = 1;
+    assert_eq!(c.intent_damage(0), Some(10));
+}
+
+#[test]
+fn enemy_phase_is_logged() {
+    let (mut c, mut rng) = start(&["dummy", "idle"]);
+    set_hand(&mut c, &[]);
+    c.enemies[1].status.poison = 2;
+    c.player.block = 3;
+    end(&mut c, &mut rng);
+    assert_eq!(
+        c.log,
+        vec![
+            LogEntry::EnemyAttack {
+                enemy: 0,
+                hp_lost: 2
+            },
+            LogEntry::Poison {
+                who: Who::Enemy(1),
+                damage: 2
+            },
+        ]
+    );
 }
 
 #[test]
@@ -573,6 +690,7 @@ fn greedy_fights_always_end() {
             max_hp: 75,
             deck: &d,
             relics: &[],
+            bonus: CombatBonus::default(),
         };
         let mut c = Combat::start(
             setup,

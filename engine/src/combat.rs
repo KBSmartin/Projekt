@@ -1,13 +1,12 @@
-//! Combat rules, ported 1:1 from the prototype (`calc`, `hit`, `startCombat`,
+//! Combat rules, ported from the prototype (`calc`, `hit`, `startCombat`,
 //! `draw`, `startTurn`, `playCard`, `playerEnd`, `enemyPhase`, `endTurn`).
 //!
-//! The port keeps the prototype's quirks on purpose, so bot results stay
-//! comparable. Known quirks are marked with "Prototype quirk".
+//! Deliberate fixes against the prototype are marked with "Fix:".
 //!
 //! All randomness goes through the [`GameRng`] passed in by the caller, and
 //! card and enemy data are passed in as well, so a [`Combat`] is plain data.
 
-use crate::card::{Card, CardDb, CardInstance, CardKind};
+use crate::card::{Card, CardDb, CardInstance, CardKind, Tag};
 use crate::enemy::{EnemyDb, EnemyDef, Move};
 use crate::relic::{ANCHOR_BLOCK, RUBY_STRENGTH, Relic};
 use crate::rng::GameRng;
@@ -142,6 +141,17 @@ impl EnemyState {
     }
 }
 
+/// Combat bonuses that come from the character (and later from equipment).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CombatBonus {
+    /// Block at the start of every combat.
+    pub start_block: i32,
+    /// Extra cards drawn every turn.
+    pub extra_draw: u32,
+    /// Flat damage bonus for cards with this tag.
+    pub tag_damage: Option<(Tag, i32)>,
+}
+
 /// Everything the combat needs from the run.
 #[derive(Debug, Clone, Copy)]
 pub struct CombatSetup<'a> {
@@ -149,7 +159,33 @@ pub struct CombatSetup<'a> {
     pub max_hp: i32,
     pub deck: &'a [CardInstance],
     pub relics: &'a [Relic],
+    pub bonus: CombatBonus,
 }
+
+/// Who suffered something in a [`LogEntry`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Who {
+    Player,
+    Enemy(usize),
+}
+
+/// Things that happened outside the player's own card plays, for the UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogEntry {
+    /// An enemy attacked; `hp_lost` is after block (0 = fully blocked).
+    EnemyAttack { enemy: usize, hp_lost: i32 },
+    /// Poison ticked.
+    Poison { who: Who, damage: i32 },
+    /// "Brand" cards burned the player.
+    Burn { hp_lost: i32 },
+    /// Thorns hit an attacker.
+    Thorns { enemy: usize, damage: i32 },
+    /// An enemy died.
+    EnemyDied { enemy: usize },
+}
+
+/// Maximum number of kept log entries.
+const LOG_LIMIT: usize = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CombatError {
@@ -211,6 +247,10 @@ pub struct Combat {
     /// Starts at 1 for the first player turn.
     pub turn: u32,
     pub outcome: Option<Outcome>,
+    /// Flat damage bonus for cards with a tag (from [`CombatBonus`]).
+    pub tag_damage: Option<(Tag, i32)>,
+    /// Recent events, oldest first.
+    pub log: Vec<LogEntry>,
 }
 
 impl Combat {
@@ -268,8 +308,9 @@ impl Combat {
             block: 0,
             status: Statuses::default(),
         };
+        player.block = setup.bonus.start_block;
         if has(Relic::Anchor) {
-            player.block = ANCHOR_BLOCK;
+            player.block += ANCHOR_BLOCK;
         }
         if has(Relic::Ruby) {
             player.status.strength = RUBY_STRENGTH;
@@ -285,9 +326,11 @@ impl Combat {
             exhaust: Vec::new(),
             energy: 0,
             max_energy: BASE_ENERGY + u32::from(has(Relic::Core)),
-            draw_per_turn: BASE_DRAW + u32::from(has(Relic::Lens)),
+            draw_per_turn: BASE_DRAW + u32::from(has(Relic::Lens)) + setup.bonus.extra_draw,
             turn: 0,
             outcome: None,
+            tag_damage: setup.bonus.tag_damage,
+            log: Vec::new(),
         };
         combat.start_turn(rng);
         Ok(combat)
@@ -295,6 +338,52 @@ impl Combat {
 
     pub fn is_over(&self) -> bool {
         self.outcome.is_some()
+    }
+
+    /// Equipment and character modifiers for a card's damage.
+    pub fn damage_mods(&self, card: &Card) -> DamageMods {
+        let weapon = match self.tag_damage {
+            Some((tag, bonus)) if card.has_tag(tag) => bonus,
+            _ => 0,
+        };
+        DamageMods {
+            weapon,
+            ..DamageMods::NEUTRAL
+        }
+    }
+
+    /// Damage per hit the card would deal to `target` right now, or against an
+    /// enemy without status effects if `target` is `None`. For card texts.
+    pub fn card_damage(&self, card: &Card, target: Option<usize>) -> i32 {
+        let default = Statuses::default();
+        let defender = target
+            .and_then(|t| self.enemies.get(t))
+            .map_or(&default, |e| &e.status);
+        let base = if card.effects.block_damage {
+            self.player.block
+        } else {
+            card.effects.damage as i32
+        };
+        calc_damage(base, self.damage_mods(card), &self.player.status, defender)
+    }
+
+    /// Damage per hit of the enemy's next attack against the player, if it attacks.
+    pub fn intent_damage(&self, enemy: usize) -> Option<i32> {
+        let e = self.enemies.get(enemy)?;
+        let n = e.intent().damage?;
+        Some(calc_damage(
+            n as i32,
+            DamageMods::NEUTRAL,
+            &e.status,
+            &self.player.status,
+        ))
+    }
+
+    fn push_log(&mut self, entry: LogEntry) {
+        self.log.push(entry);
+        if self.log.len() > LOG_LIMIT {
+            self.log.remove(0);
+        }
     }
 
     /// Effective values of the hand card at `index`, if it can be played now.
@@ -342,6 +431,7 @@ impl Combat {
         };
 
         if e.damage > 0 || e.block_damage {
+            let mods = self.damage_mods(&card);
             for &t in &targets {
                 for _ in 0..e.hits.max(1) {
                     if self.enemies[t].dead {
@@ -352,7 +442,7 @@ impl Combat {
                     } else {
                         e.damage as i32
                     };
-                    self.hit_enemy(t, base);
+                    self.hit_enemy(t, base, mods);
                 }
             }
         }
@@ -412,7 +502,14 @@ impl Combat {
         if self.turn > 1 {
             self.player.block = 0;
         }
+        let before = self.player.hp;
         self.player.status.tick_poison(&mut self.player.hp);
+        if self.player.hp < before {
+            self.push_log(LogEntry::Poison {
+                who: Who::Player,
+                damage: before - self.player.hp,
+            });
+        }
         self.check();
         if self.is_over() {
             return;
@@ -441,13 +538,8 @@ impl Combat {
     }
 
     /// Player attacks an enemy (prototype `hit(P, t, base)`).
-    fn hit_enemy(&mut self, t: usize, base: i32) {
-        let v = calc_damage(
-            base,
-            DamageMods::NEUTRAL,
-            &self.player.status,
-            &self.enemies[t].status,
-        );
+    fn hit_enemy(&mut self, t: usize, base: i32, mods: DamageMods) {
+        let v = calc_damage(base, mods, &self.player.status, &self.enemies[t].status);
         let enemy = &mut self.enemies[t];
         let absorbed = enemy.block.min(v);
         enemy.block -= absorbed;
@@ -477,10 +569,16 @@ impl Combat {
         if let Some(s) = source
             && self.player.status.thorns > 0
         {
+            let damage = self.player.status.thorns as i32;
             let enemy = &mut self.enemies[s];
-            enemy.hp -= self.player.status.thorns as i32;
-            if enemy.hp <= 0 {
+            enemy.hp -= damage;
+            let died = enemy.hp <= 0;
+            if died {
                 enemy.dead = true;
+            }
+            self.push_log(LogEntry::Thorns { enemy: s, damage });
+            if died {
+                self.push_log(LogEntry::EnemyDied { enemy: s });
             }
         }
         loss
@@ -509,8 +607,12 @@ impl Combat {
             .iter()
             .filter(|c| c.resolve(db).is_some_and(|c| c.effects.burn))
             .count();
-        for _ in 0..burns {
-            self.hit_player(None, BURN_DAMAGE);
+        if burns > 0 {
+            let mut hp_lost = 0;
+            for _ in 0..burns {
+                hp_lost += self.hit_player(None, BURN_DAMAGE);
+            }
+            self.push_log(LogEntry::Burn { hp_lost });
         }
         for c in std::mem::take(&mut self.hand) {
             if c.resolve(db).is_some_and(|c| c.effects.ethereal) {
@@ -519,14 +621,17 @@ impl Combat {
                 self.discard.push(c);
             }
         }
-        // Prototype quirk: the player's weak and vulnerable drop before the
-        // enemies act, so 1 stack applied by an enemy never takes effect.
-        self.player.status.tick_debuffs();
+        // Weak affects the player's attacks, so it drops after the player's turn.
+        // Fix: the prototype also lowered vulnerable here, before the enemies
+        // acted, so 1 stack from an enemy never mattered. It now drops at the
+        // end of the enemy phase. Each stack thus counts exactly once.
+        self.player.status.weak = self.player.status.weak.saturating_sub(1);
         self.check();
     }
 
     /// Prototype `enemyPhase`.
     fn enemy_phase(&mut self) {
+        let vulnerable_at_start = self.player.status.vulnerable > 0;
         for i in 0..self.enemies.len() {
             if self.enemies[i].dead {
                 continue;
@@ -534,10 +639,21 @@ impl Combat {
             {
                 let enemy = &mut self.enemies[i];
                 enemy.block = 0;
+                let before = enemy.hp;
                 enemy.status.tick_poison(&mut enemy.hp);
-                if enemy.hp <= 0 {
-                    // Prototype quirk: no check here; the win is detected later.
+                let damage = before - enemy.hp;
+                let died = enemy.hp <= 0;
+                if died {
                     enemy.dead = true;
+                }
+                if damage > 0 {
+                    self.push_log(LogEntry::Poison {
+                        who: Who::Enemy(i),
+                        damage,
+                    });
+                }
+                if died {
+                    self.push_log(LogEntry::EnemyDied { enemy: i });
                     continue;
                 }
             }
@@ -551,12 +667,14 @@ impl Combat {
                 }
             }
             if let Some(n) = m.damage {
+                let mut hp_lost = 0;
                 for _ in 0..m.hit_count() {
-                    self.hit_player(Some(i), n as i32);
+                    hp_lost += self.hit_player(Some(i), n as i32);
                     if self.player.hp <= 0 || self.enemies[i].dead {
                         break;
                     }
                 }
+                self.push_log(LogEntry::EnemyAttack { enemy: i, hp_lost });
             }
             if self.enemies[i].dead {
                 self.check();
@@ -585,6 +703,16 @@ impl Combat {
                 return;
             }
         }
+        // Vulnerable affects enemy attacks, so it drops after an enemy phase in
+        // which it was already active. Stacks applied during this phase count
+        // from the next enemy phase on.
+        if vulnerable_at_start {
+            self.player.status.vulnerable = self.player.status.vulnerable.saturating_sub(1);
+        }
+        // Fix: the prototype did not check here, so a fight won by poison was
+        // only detected after the player's own poison ticked, which could
+        // turn the win into a loss.
+        self.check();
     }
 }
 
