@@ -15,8 +15,8 @@
   --gold: #e3b95a;
   --hp: #c9504a;
   --blk: #6aa9d6;
-  --fd: 'Grenze Gotisch', Georgia, serif;
-  --fb: 'Alegreya Sans', system-ui, sans-serif;
+  --fd: 'Press Start 2P', monospace;
+  --fb: 'Press Start 2P', monospace;
   color-scheme: dark;
 }
 
@@ -141,7 +141,6 @@ svg.map { width: 100%; height: auto; display: block; }
   --px: 2px;
   position: relative; flex: 0 0 132px; width: 132px; height: 196px; padding: 0 0 12px;
   display: flex; flex-direction: column; text-align: left; color: var(--ink);
-  font-family: 'Pixelify Sans', var(--fb);
   border: 8px solid transparent; border-image: url(assets/karten/rahmen_s.png) 4 / 8px stretch;
   background: repeating-conic-gradient(var(--oc) 0 25%, #141016 0 50%) 0 0 / 4px 4px;
   background-clip: padding-box; image-rendering: pixelated;
@@ -156,24 +155,24 @@ button.card:disabled { opacity: .45; cursor: default; }
   background: #d8a038; color: #251a05; border: 2px solid #0a0809;
   box-shadow: inset 2px 2px 0 #f8e08a, inset -2px -2px 0 #8a5a1a;
   clip-path: polygon(2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px), 0 2px, 2px 2px);
-  font-family: 'VT323', monospace; font-size: 1.35rem; line-height: 1; display: grid; place-items: center;
+  font-size: 12px; line-height: 1; display: grid; place-items: center;
 }
 .cn {
   margin: 0 0 0 20px; padding: 3px 6px; min-height: 20px;
   background: var(--ct); box-shadow: inset 0 2px 0 #ffffff40, inset 0 -2px 0 #00000059;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px), calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%, 0 100%);
-  font-weight: 700; font-size: .9rem; line-height: 1.05; color: #fff6e6; text-shadow: 1px 1px 0 #000;
+  font-size: 8px; line-height: 1.35; color: #fff6e6; text-shadow: 1px 1px 0 #000; display: flex; align-items: center;
   white-space: nowrap; overflow: hidden;
 }
-.cn.long { font-size: .7rem; line-height: 1; white-space: normal; display: flex; align-items: center; letter-spacing: -.02em; }
+.cn.long { white-space: normal; }
 .art {
   margin: 4px 4px 0; height: 58px; display: grid; place-items: center;
   border: 2px solid var(--rc); box-shadow: inset 0 0 0 2px #000;
   background: repeating-conic-gradient(color-mix(in srgb, var(--ct) 22%, #0b0a0d) 0 25%, #0b0a0d 0 50%) 0 0 / 4px 4px;
 }
 .art img { width: 48px; height: 48px; image-rendering: pixelated; }
-.ct { margin-top: 3px; text-align: center; font-family: 'VT323', monospace; font-size: .85rem; line-height: .9; text-transform: uppercase; letter-spacing: .05em; color: color-mix(in srgb, var(--ct) 40%, #fff); }
-.cx { flex: 1; margin: 2px 4px 0; font-family: 'VT323', monospace; font-size: 1.02rem; line-height: .95; color: #efe6d2; text-align: center; text-shadow: 1px 1px 0 #000; }
+.ct { margin-top: 3px; text-align: center; font-size: 6px; line-height: 1.5; text-transform: uppercase; letter-spacing: .05em; color: color-mix(in srgb, var(--ct) 40%, #fff); }
+.cx { flex: 1; margin: 2px 4px 0; font-size: 8px; line-height: 1.5; color: #efe6d2; text-align: center; text-shadow: 1px 1px 0 #000; }
 .gem {
   position: absolute; bottom: 1px; left: calc(50% - 4px); width: 8px; height: 8px; background: var(--rc);
   clip-path: polygon(2px 0, 6px 0, 6px 2px, 8px 2px, 8px 6px, 6px 6px, 6px 8px, 2px 8px, 2px 6px, 0 6px, 0 2px, 2px 2px);
@@ -216,6 +215,33 @@ button.card:disabled { opacity: .45; cursor: default; }
 .bgimg { position: fixed; inset: 0; z-index: -2; background: #0e1113 url(assets/hintergrund/wald.png) center / cover no-repeat; image-rendering: pixelated; }
 .bg-desert { background-image: url(assets/hintergrund/wueste.png); }
 .bg-fortress { background-image: url(assets/hintergrund/festung.png); }
+.bg-title { background-image: url(assets/hintergrund/titel.png); }
+
+/* Animated effect layers over the background. Each layer is a 320x180 tile
+   (ui/assets/hintergrund/fx) scaled to the window; moving layers are twice as
+   large and shift by one tile in steps of one art pixel, so they loop without a
+   seam and keep the pixel look. */
+.fx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.fx i { position: absolute; inset: 0; display: block; background-repeat: repeat; background-size: 100% 100%; image-rendering: pixelated; }
+@keyframes fx-fall { to { transform: translateY(50%); } }
+@keyframes fx-rise { to { transform: translateY(-50%); } }
+@keyframes fx-drift { to { transform: translateX(50%); } }
+@keyframes fx-pulse { from { opacity: .15; } to { opacity: 1; } }
+@keyframes fx-flicker { 0% { opacity: 1; } 30% { opacity: .55; } 45% { opacity: .9; } 70% { opacity: .65; } 85% { opacity: 1; } }
+.fx-forest .l1 { background-image: url(assets/hintergrund/fx/strahlen.png); }
+.fx-forest .l2 { background-image: url(assets/hintergrund/fx/nebel.png); }
+.fx-forest .l3 { background-image: url(assets/hintergrund/fx/blaetter.png); }
+.fx-forest .l4 { background-image: url(assets/hintergrund/fx/funken.png); }
+.fx-desert .l1 { background-image: url(assets/hintergrund/fx/asche.png); }
+.fx-desert .l2 { background-image: url(assets/hintergrund/fx/glut.png); }
+.fx-desert .l3 { background-image: url(assets/hintergrund/fx/glut.png); background-position: 37% 61%; }
+.fx-fortress .l1 { background-image: url(assets/hintergrund/fx/polarlicht.png); }
+.fx-fortress .l2 { background-image: url(assets/hintergrund/fx/schnee_klein.png); }
+.fx-fortress .l3 { background-image: url(assets/hintergrund/fx/schnee_gross.png); }
+.fx-title .l1 { background-image: url(assets/hintergrund/fx/sterne.png); }
+.fx-title .l2 { background-image: url(assets/hintergrund/fx/nebel_dunkel.png); }
+.fx-title .l3 { background-image: url(assets/hintergrund/fx/feuerschein.png); }
+.fx-title .l4 { background-image: url(assets/hintergrund/fx/funken.png); }
 .app::before { background: radial-gradient(ellipse 80% 55% at 50% -8%, color-mix(in srgb, var(--acc) 18%, transparent), transparent 72%), linear-gradient(#0000 55%, #05080699); }
 
 /* Hero portraits: 8 frames of 16x16 side by side, shown 8x. */
@@ -274,7 +300,7 @@ button.card:disabled { opacity: .45; cursor: default; }
 }
 
 /* Debug panel (debug builds only) */
-.debug { position: fixed; right: 12px; bottom: 12px; z-index: 1000; font-size: 13px; }
+.debug { font-family: system-ui, sans-serif; position: fixed; right: 12px; bottom: 12px; z-index: 1000; font-size: 13px; }
 .debug-toggle { background: #3a1f1f; color: #ffd9c9; border: 1px solid #a8463a; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 .debug.open .debug-toggle { float: right; }
 .debug-body { clear: both; margin-top: 6px; background: rgba(14, 17, 19, 0.96); border: 1px solid #a8463a; border-radius: 8px; padding: 10px; width: 520px; display: flex; flex-direction: column; gap: 8px; }
@@ -283,3 +309,60 @@ button.card:disabled { opacity: .45; cursor: default; }
 .debug-row select, .debug-row input { flex: 1; min-width: 0; background: #1b2124; color: #ebe6d8; border: 1px solid #4a5a60; border-radius: 4px; padding: 3px 6px; }
 .debug-row button { background: #2a3034; color: #ebe6d8; border: 1px solid #4a5a60; border-radius: 4px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 .debug-row button:hover { border-color: #e3b95a; }
+
+/* Press Start 2P is drawn on an 8 px grid: sizes are kept to 8, 16, 24 ... where
+   it matters, smaller steps only for long body text. */
+body { font: 10px/1.8 var(--fb); }
+h1 { font-size: 40px; font-weight: 400; line-height: 1.2; text-shadow: 4px 4px 0 #000; }
+h1.end { font-size: 32px; }
+h2 { font-size: 16px; font-weight: 400; line-height: 1.4; }
+h3 { font-size: 12px; font-weight: 400; }
+.btn { font-size: 10px; font-weight: 400; padding: 12px 16px; border-radius: 0; box-shadow: inset -3px -3px 0 #0005, inset 3px 3px 0 #fff3; }
+.btn.sm { font-size: 8px; padding: 8px 10px; }
+.small, .prose { font-size: 10px; }
+.notice { font-size: 10px; font-weight: 400; }
+.kicker { font-size: 8px; letter-spacing: .1em; }
+.lead { font-size: 12px; line-height: 1.9; }
+.how { font-size: 9px; gap: 10px; }
+.char-name { font-size: 16px; font-weight: 400; }
+.char-hp { font-size: 10px; font-weight: 400; }
+.char-desc, .char-trait { font-size: 9px; line-height: 1.7; }
+.char-deck { font-size: 8px; line-height: 1.7; }
+.reg { font-size: 16px; font-weight: 400; }
+.reg small { font-size: 8px; margin-top: 6px; }
+.stat { font-size: 10px; font-weight: 400; }
+.gain { font-size: 16px; }
+.gain.result { font-size: 12px; line-height: 1.7; }
+.legendline { font-size: 8px; }
+.intent span { font-size: 9px; font-weight: 400; padding: 3px 8px; }
+.nm { font-size: 10px; margin: 2px 0; }
+.hp b { font-size: 8px; font-weight: 400; }
+.hp.lg b { font-size: 10px; }
+.chip { font-size: 8px; font-weight: 400; padding: 3px 6px; }
+.log { font-size: 9px; line-height: 1.7; }
+.hint { font-size: 10px; font-weight: 400; }
+.piles { font-size: 8px; line-height: 1.9; }
+.orb { font-size: 20px; font-weight: 400; }
+.orb small { font-size: 8px; font-weight: 400; }
+.legend, .statsbox .legend { font-size: 8px; line-height: 1.8; }
+.pname { font-size: 12px; margin-top: 4px; }
+.pmeta { font-size: 8px; font-weight: 400; }
+.box-h { font-size: 10px; }
+.price { font-size: 10px; font-weight: 400; }
+.relicgain { font-size: 9px; line-height: 1.7; }
+.rl { font-size: 9px; }
+/* Motion of the effect layers per region. */
+.fx-forest .l1 { --d: 7s; animation: fx-pulse var(--d) steps(5) infinite alternate; }
+.fx-forest .l2 { --d: 90s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
+.fx-forest .l3 { --d: 22s; top: -100%; height: 200%; background-size: 100% 50%; animation: fx-fall var(--d) steps(180) infinite; }
+.fx-forest .l4 { --d: 2.6s; animation: fx-pulse var(--d) steps(4) infinite alternate; }
+.fx-desert .l1 { --d: 70s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
+.fx-desert .l2 { --d: 14s; height: 200%; background-size: 100% 50%; animation: fx-rise var(--d) steps(180) infinite; }
+.fx-desert .l3 { --d: 23s; height: 200%; background-size: 100% 50%; animation: fx-rise var(--d) steps(180) infinite; opacity: .7; }
+.fx-fortress .l1 { --d: 120s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
+.fx-fortress .l2 { --d: 20s; top: -100%; height: 200%; background-size: 100% 50%; animation: fx-fall var(--d) steps(180) infinite; }
+.fx-fortress .l3 { --d: 11s; top: -100%; height: 200%; background-size: 100% 50%; animation: fx-fall var(--d) steps(180) infinite; }
+.fx-title .l1 { --d: 1.8s; animation: fx-pulse var(--d) steps(3) infinite alternate; }
+.fx-title .l2 { --d: 110s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
+.fx-title .l3 { --d: .9s; animation: fx-flicker var(--d) steps(1) infinite; }
+.fx-title .l4 { --d: 3.2s; animation: fx-pulse var(--d) steps(4) infinite alternate; }

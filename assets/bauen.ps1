@@ -7,8 +7,9 @@ $here = $PSScriptRoot
 & (Join-Path $here 'portraets\animationen.ps1')
 $bg = Join-Path $here '..\ui\assets\hintergrund'
 New-Item -ItemType Directory -Force $bg | Out-Null
-foreach ($n in 'wald', 'wueste', 'festung') {
+foreach ($n in 'titel', 'wald', 'wueste', 'festung') {
   & (Join-Path $here "hintergrund\$n.ps1")
   Copy-Item (Join-Path $here "hintergrund\$n.png") (Join-Path $bg "$n.png") -Force
 }
+& (Join-Path $here 'hintergrund\effekte.ps1')
 Write-Host 'Grafiken neu erzeugt.'

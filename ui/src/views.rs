@@ -31,7 +31,7 @@ pub fn screen(game: Game) -> AnyView {
             // Fight and map use the whole window; other screens keep the column.
             let full = matches!(run.phase, Phase::Combat(_) | Phase::Map);
             view! {
-                <div class=format!("bgimg bg-{}", d.regions[run.region].id)></div>
+                {backdrop(&d.regions[run.region].id)}
                 <main class=if full { "app full" } else { "app" } style=format!("--acc:{color}")>
                     {body}
                     {overlay}
@@ -40,6 +40,21 @@ pub fn screen(game: Game) -> AnyView {
             .into_any()
         }
     })
+}
+
+/// Pixel-art background of a region (or "title") plus its animated effect
+/// layers; what each layer shows is set in the CSS per region.
+fn backdrop(id: &str) -> AnyView {
+    view! {
+        <div class=format!("bgimg bg-{id}")></div>
+        <div class=format!("fx fx-{id}") aria-hidden="true">
+            <i class="l1"></i>
+            <i class="l2"></i>
+            <i class="l3"></i>
+            <i class="l4"></i>
+        </div>
+    }
+    .into_any()
 }
 
 /// Sprite sheet prefix of a character's portrait.
@@ -156,7 +171,7 @@ fn title(game: Game) -> AnyView {
         })
         .collect_view();
     view! {
-        <div class="bgimg bg-forest"></div>
+        {backdrop("title")}
         <main class="app">
             <div class="title">
                 <div class="kicker">"Ein Deckbuilder-Roguelike · Vorab-Version"</div>
