@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verlorene Lande</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Grenze+Gotisch:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* Plan: dunkle Schieferwelt, die Akzentfarbe wechselt mit dem Gebiet (Wald grün, Wüste Glut, Frost Eisblau).
+   Fraktur für Namen und Zahlen, Karten als schmale Tafeln mit farbigem Kopfband je Kartentyp. */
+:root{
+  --bg:#0e1113; --panel:#171c1f; --panel2:#1f262a; --line:#2c363b;
+  --ink:#ebe6d8; --mute:#8d9a9c; --acc:#c8b27a;
+  --atk:#c4524a; --skl:#4b86b8; --pow:#9a6bc0; --junk:#6b6f72;
+  --gold:#e3b95a; --hp:#c9504a; --blk:#6aa9d6;
+  --fd:'Grenze Gotisch',Georgia,serif; --fb:'Alegreya Sans',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:17px/1.35 var(--fb);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 55% at 50% -8%,color-mix(in srgb,var(--acc) 26%,transparent),transparent 72%)}
+#app{position:relative;max-width:1000px;margin:0 auto;padding:12px 16px 40px;min-height:100%}
+h1,h2,h3{font-family:var(--fd);font-weight:700;line-height:1.05}
+h1{font-size:clamp(2.6rem,9vw,4.6rem);font-weight:800;color:var(--acc)}
+h2{font-size:1.9rem}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:var(--acc);color:#0c1011;border:0;padding:10px 22px;border-radius:6px;font-weight:700;font-size:1rem;transition:filter .15s,transform .15s}
+.btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.center{text-align:center}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center}
+.small{color:var(--mute);font-size:.92rem}
+
+/* Kopfleiste */
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding:6px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.reg{font-family:var(--fd);font-size:1.6rem;font-weight:700;color:var(--acc);line-height:1}
+.reg small{display:block;font-family:var(--fb);font-size:.8rem;font-weight:400;color:var(--mute);margin-top:3px}
+.stats{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.stat{font-weight:700;font-variant-numeric:tabular-nums}
+.relics{display:flex;gap:4px}
+.relic{width:32px;height:32px;display:grid;place-items:center;font-size:1.15rem;background:var(--panel);border:1px solid var(--line);border-radius:6px;cursor:help}
+
+/* Titel */
+.title{padding:9vh 0 0;max-width:620px}
+.kicker{text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;color:var(--mute);margin-bottom:10px}
+.lead{font-size:1.25rem;margin:18px 0 14px;max-width:34em}
+.how{margin:0 0 26px 1.1em;color:var(--mute);display:grid;gap:6px;max-width:34em}
+.best{margin-top:22px;color:var(--mute)}
+
+/* Panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 18px;margin:14px auto;max-width:760px;display:grid;gap:14px;justify-items:center}
+.big{font-size:3.4rem;line-height:1}
+.gain{font-family:var(--fd);font-size:1.7rem;color:var(--gold)}
+.relicgain{display:flex;gap:12px;align-items:center;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.relicgain span{font-size:2rem}
+.opts{display:grid;gap:10px;width:100%;max-width:520px}
+.opts .btn{text-align:left}
+
+/* Karte */
+.mapwrap{max-width:460px;margin:0 auto}
+svg.map{width:100%;height:auto;display:block}
+.map line{stroke:var(--line);stroke-width:2;stroke-dasharray:4 5}
+.map line.on{stroke:var(--acc);stroke-dasharray:none;stroke-width:3}
+.nd circle{fill:var(--panel2);stroke:var(--line);stroke-width:2}
+.nd.vis{opacity:.4}
+.nd.cur circle{stroke:var(--ink);stroke-width:3}
+.nd.av{cursor:pointer}
+.nd.av circle{stroke:var(--acc);stroke-width:3;animation:pulse 1.6s ease-in-out infinite}
+.nd.av:hover circle{fill:color-mix(in srgb,var(--acc) 25%,var(--panel2))}
+.nd.boss circle{fill:color-mix(in srgb,var(--acc) 14%,var(--panel2))}
+.nd text{pointer-events:none}
+@keyframes pulse{50%{stroke-width:6;stroke-opacity:.55}}
+.legendline{text-align:center;color:var(--mute);font-size:.9rem;margin-top:6px}
+
+/* Kampf */
+.enemies{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;min-height:230px;align-items:flex-end;margin:8px 0}
+.en{position:relative;width:158px;text-align:center;padding:8px 6px 10px;border-radius:12px;border:1px solid transparent}
+.en.tg{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);cursor:pointer}
+.en.dead{opacity:.16;filter:grayscale(1);pointer-events:none}
+.intent{min-height:30px;display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}
+.intent span{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:1px 9px;font-weight:700;font-size:.92rem}
+.sprite{font-size:64px;line-height:1.15;filter:drop-shadow(0 6px 8px #0009)}
+.nm{font-family:var(--fd);font-size:1.2rem}
+.hp{position:relative;height:18px;background:#0a0d0e;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:4px 0}
+.hp i{position:absolute;inset:0 auto 0 0;background:var(--hp);transition:width .35s}
+.hp b{position:relative;display:block;font-size:.8rem;line-height:16px;font-variant-numeric:tabular-nums}
+.hp.lg{height:24px;min-width:180px}
+.hp.lg b{line-height:22px;font-size:.95rem}
+.chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;min-height:24px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 8px;font-size:.85rem;font-weight:700}
+.chip.blkc{border-color:var(--blk);color:var(--blk)}
+.log{min-height:60px;text-align:center;color:var(--mute);font-size:.95rem}
+.me{position:relative;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:6px 0 4px}
+.orb{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-family:var(--fd);font-weight:800;font-size:1.7rem;color:#251a05;
+  background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--gold) 60%,#8a6a20);box-shadow:0 0 18px #e3b95a44}
+.orb small{font-size:.75rem;font-weight:700}
+.mid{display:grid;gap:4px}
+.piles{color:var(--mute);font-size:.88rem;text-align:center}
+.hint{text-align:center;color:var(--acc);font-weight:700;margin-top:6px}
+.hand{display:flex;gap:12px;overflow-x:auto;padding:20px 8px 12px;justify-content:center;min-height:216px}
+@media(max-width:760px){.hand{justify-content:flex-start}}
+
+.card{position:relative;flex:0 0 124px;width:124px;height:180px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-top:5px solid var(--ct,var(--line));border-radius:8px;padding:8px;text-align:left;
+  display:flex;flex-direction:column;gap:3px;transition:transform .15s,box-shadow .15s}
+button.card:hover:not(:disabled){transform:translateY(-8px)}
+.card.sel{transform:translateY(-16px);box-shadow:0 0 0 2px var(--acc),0 10px 22px #000a}
+button.card:disabled{opacity:.42;cursor:default}
+.cost{position:absolute;top:-13px;left:-9px;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#251a05;font-family:var(--fd);font-weight:800;font-size:1.1rem;display:grid;place-items:center;border:2px solid var(--bg)}
+.cn{font-family:var(--fd);font-weight:700;font-size:1.08rem;line-height:1.05;margin-top:7px}
+.ct{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--mute)}
+.ci{font-size:1.8rem;text-align:center;line-height:1.2}
+.cx{font-size:.8rem;line-height:1.18;color:#cdd5d3}
+.t-a{--ct:var(--atk)}.t-s{--ct:var(--skl)}.t-p{--ct:var(--pow)}.t-x{--ct:var(--junk)}
+.card.up .cn{color:#9fe3a4}
+.grid{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:14px 0}
+.item{display:grid;gap:8px;justify-items:center}
+.item.sold{opacity:.35}
+.price{font-weight:700;color:var(--gold)}
+.price.no{color:var(--hp)}
+.legend{margin:6px auto 0;max-width:640px;color:var(--mute);font-size:.88rem}
+.legend summary{cursor:pointer;text-align:center}
+.legend p{margin-top:6px}
+
+/* Effekte */
+.fl{position:absolute;left:50%;top:34%;font-family:var(--fd);font-weight:800;font-size:1.7rem;pointer-events:none;text-shadow:0 2px 5px #000;
+  animation:fl 1.05s ease-out forwards;white-space:nowrap}
+.fl.dmg{color:#ff7a6e}.fl.blk{color:var(--blk)}.fl.heal{color:#7ee08a}.fl.st{color:var(--gold);font-size:1.15rem}
+@keyframes fl{0%{opacity:0;transform:translate(-50%,6px)}12%{opacity:1}100%{opacity:0;transform:translate(-50%,-56px)}}
+.shake{animation:sh .32s}
+@keyframes sh{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);padding:10px 18px;border-radius:8px;z-index:30;animation:fl2 2.6s forwards}
+@keyframes fl2{0%{opacity:0}10%,80%{opacity:1}100%{opacity:0}}
+
+/* Overlay */
+.ov{position:fixed;inset:0;background:#000c;z-index:20;overflow:auto;padding:16px}
+.ovin{max-width:900px;margin:0 auto;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:18px}
+.between{justify-content:space-between}
+.rl{display:grid;gap:6px;margin-top:10px}
+.rl div{display:flex;gap:10px;align-items:center}
+
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/*LOGIC_START*/
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function wpick(w){const t=Object.values(w).reduce((a,b)=>a+b,0);let x=Math.random()*t;for(const k in w){x-=w[k];if(x<0)return k}return Object.keys(w)[0]}
+
+const ST={str:'Stärke',weak:'Schwäche',vuln:'Verwundbar',psn:'Gift',thorns:'Dornen'};
+const STI={str:'💪',weak:'🥀',vuln:'🎯',psn:'🧪',thorns:'🌵'};
+const STD={str:'+1 Schaden pro Punkt bei jedem Angriff',weak:'Richtet 25 % weniger Schaden an',vuln:'Erleidet 50 % mehr Schaden',psn:'Verliert zu Rundenbeginn LP, danach sinkt das Gift um 1',thorns:'Wer dich angreift, erleidet Schaden'};
+
+/* t: a Angriff, s Fertigkeit, p Kraft, x Status. r: s Start, c/u/r Seltenheit, j Müll */
+const CARDS={
+ strike:{n:'Schlag',e:'🗡️',t:'a',c:1,r:'s',dmg:6},
+ defend:{n:'Block',e:'🛡️',t:'s',c:1,r:'s',blk:5},
+ bash:{n:'Schildstoß',e:'🔨',t:'a',c:2,r:'s',dmg:8,vuln:2},
+ twin:{n:'Doppelhieb',e:'⚔️',t:'a',c:1,r:'c',dmg:4,hits:2},
+ kick:{n:'Tritt',e:'🦶',t:'a',c:0,r:'c',dmg:4},
+ flank:{n:'Flankenhieb',e:'🪓',t:'a',c:1,r:'c',dmg:6,weak:1},
+ whirl:{n:'Wirbel',e:'🌀',t:'a',c:1,r:'c',dmg:5,aoe:1},
+ venom:{n:'Giftpfeil',e:'🏹',t:'a',c:1,r:'c',dmg:3,psn:4},
+ slam:{n:'Schildhieb',e:'🔰',t:'a',c:1,r:'c',bdmg:1},
+ guard:{n:'Bollwerk',e:'🏰',t:'s',c:2,r:'c',blk:12},
+ dodge:{n:'Ausweichen',e:'💨',t:'s',c:1,r:'c',blk:6,draw:1},
+ focus:{n:'Sammeln',e:'🧘',t:'s',c:0,r:'c',en:1,exh:1},
+ thorn:{n:'Dornenpanzer',e:'🌵',t:'s',c:1,r:'c',blk:4,thorns:3},
+ bandage:{n:'Verband',e:'🩹',t:'s',c:1,r:'c',heal:6,exh:1},
+ pact:{n:'Blutpakt',e:'🩸',t:'s',c:0,r:'c',hpl:3,en:2},
+ heavy:{n:'Wuchtschlag',e:'💥',t:'a',c:2,r:'u',dmg:14},
+ knives:{n:'Messersturm',e:'🔪',t:'a',c:1,r:'u',dmg:3,hits:3},
+ cloud:{n:'Giftwolke',e:'☁️',t:'s',c:1,r:'u',psn:4,aoe:1},
+ warcry:{n:'Kriegsruf',e:'📯',t:'p',c:1,r:'u',str:2},
+ leech:{n:'Aussaugen',e:'🦇',t:'a',c:2,r:'u',dmg:10,heal:5},
+ cleave:{n:'Spaltung',e:'⚡',t:'a',c:2,r:'u',dmg:7,aoe:1},
+ plan:{n:'Schlachtplan',e:'📜',t:'s',c:1,r:'u',blk:4,draw:2},
+ storm:{n:'Feuersturm',e:'🔥',t:'a',c:2,r:'r',dmg:12,aoe:1},
+ plague:{n:'Seuchenwolke',e:'☠️',t:'s',c:2,r:'r',psn:7,aoe:1},
+ iron:{n:'Eiserner Wille',e:'🦾',t:'p',c:2,r:'r',str:3},
+ fort:{n:'Festung',e:'🏯',t:'s',c:3,r:'r',blk:25},
+ decay:{n:'Ausbluten',e:'🧫',t:'s',c:1,r:'r',dblpsn:1},
+ finish:{n:'Todesstoß',e:'💀',t:'a',c:3,r:'r',dmg:30,exh:1},
+ burn:{n:'Brand',e:'🔥',t:'x',c:0,r:'j',unp:1,burn:1},
+ frost:{n:'Frost',e:'🧊',t:'x',c:0,r:'j',unp:1,eth:1},
+ curse:{n:'Last',e:'⛓️',t:'x',c:0,r:'j',unp:1}
+};
+function stats(c){
+ const s={...CARDS[c.id]};
+ if(c.up){let ch=false;
+  if(s.dmg){s.dmg=Math.ceil(s.dmg*1.4);ch=true}
+  if(s.blk){s.blk=Math.ceil(s.blk*1.4);ch=true}
+  if(s.psn){s.psn+=2;ch=true}
+  if(s.heal){s.heal+=3;ch=true}
+  if(s.str){s.str+=1;ch=true}
+  if(s.thorns){s.thorns+=2;ch=true}
+  if(s.weak){s.weak+=1;ch=true}
+  if(s.vuln){s.vuln+=1;ch=true}
+  if(!ch){if(s.c>0)s.c--;else if(s.exh)s.exh=0;else if(s.en)s.en+=1}
+ }
+ return s;
+}
+function cardText(s){
+ const p=[];
+ if(s.dmg)p.push(`${s.dmg} Schaden${s.hits>1?' ×'+s.hits:''}${s.aoe?' an alle':''}.`);
+ if(s.bdmg)p.push('Schaden gleich deinem Block.');
+ if(s.blk)p.push(`${s.blk} Block.`);
+ if(s.psn)p.push(`${s.psn} Gift${s.aoe?' an alle':''}.`);
+ if(s.dblpsn)p.push('Verdopple das Gift des Ziels.');
+ if(s.weak)p.push(`Schwäche ${s.weak}.`);
+ if(s.vuln)p.push(`Verwundbar ${s.vuln}.`);
+ if(s.thorns)p.push(`${s.thorns} Dornen.`);
+ if(s.str)p.push(`+${s.str} Stärke.`);
+ if(s.heal)p.push(`Heile ${s.heal}.`);
+ if(s.hpl)p.push(`Verliere ${s.hpl} LP.`);
+ if(s.draw)p.push(`Ziehe ${s.draw}.`);
+ if(s.en)p.push(`+${s.en} Energie.`);
+ if(s.burn)p.push('Unspielbar. Am Rundenende: 2 Schaden.');
+ else if(s.unp)p.push(s.eth?'Unspielbar. Verflüchtigt sich.':'Unspielbar. Belegt einen Platz.');
+ else if(s.exh||s.t==='p')p.push('Verbraucht.');
+ return p.join(' ');
+}
+const upgradable=c=>!c.up&&['s','c','u','r'].includes(CARDS[c.id].r);
+
+const RELICS={
+ anchor:{n:'Anker',e:'⚓',d:'Beginne jeden Kampf mit 8 Block.'},
+ ruby:{n:'Blutrubin',e:'🔴',d:'Beginne jeden Kampf mit +1 Stärke.'},
+ core:{n:'Energiekern',e:'🔋',d:'+1 Energie pro Runde.'},
+ tea:{n:'Kräutertee',e:'🍵',d:'Heile 6 LP nach jedem Kampf.'},
+ lens:{n:'Linse',e:'🔍',d:'Ziehe jede Runde 1 Karte mehr.'},
+ coin:{n:'Glücksmünze',e:'🪙',d:'50 % mehr Gold aus Kämpfen.'}
+};
+
+/* mv: Zugfolge, wird der Reihe nach wiederholt. n Schaden, h Treffer, blk Block, str Stärke, heal, weak/vuln/psn auf dich, burn/frost Karten in deine Ablage */
+const EN={
+ rat:{n:'Waldratte',e:'🐀',hp:[11,15],mv:[{n:5},{n:3,psn:2}]},
+ shroom:{n:'Giftpilz',e:'🍄',hp:[18,22],mv:[{psn:4},{n:6},{n:4,psn:2}]},
+ wolf:{n:'Wolf',e:'🐺',hp:[22,26],mv:[{n:7},{str:2},{n:8}]},
+ moss:{n:'Moosgolem',e:'🗿',hp:[56,56],mv:[{blk:12},{n:14},{n:8,weak:1}]},
+ mother:{n:'Rindenmutter',e:'🌳',hp:[80,80],mv:[{psn:5,weak:1},{n:12},{blk:14,heal:6},{n:6,h:2}]},
+ scorp:{n:'Glutskorpion',e:'🦂',hp:[28,32],mv:[{n:8},{n:5,burn:1}]},
+ spark:{n:'Funkengeist',e:'👻',hp:[15,19],mv:[{burn:2},{n:4,h:2}]},
+ worm:{n:'Sandwurm',e:'🪱',hp:[34,40],mv:[{n:10},{blk:8,str:1},{n:13}]},
+ priest:{n:'Aschepriester',e:'🧙',hp:[62,62],mv:[{burn:3},{n:9,vuln:2},{n:16}]},
+ colossus:{n:'Magmakoloss',e:'🌋',hp:[120,120],mv:[{burn:3},{n:15},{blk:20},{n:7,h:3,str:1}]},
+ guard:{n:'Frostwache',e:'💂',hp:[34,38],mv:[{blk:10},{n:9,weak:1}]},
+ elem:{n:'Eiselementar',e:'🧊',hp:[26,30],mv:[{n:4,frost:2},{n:10}]},
+ giant:{n:'Schneeriese',e:'🦣',hp:[50,56],mv:[{n:15},{blk:10,str:1},{n:7,h:2}]},
+ knight:{n:'Eisritter',e:'🤺',hp:[74,74],mv:[{blk:15},{n:20},{n:6,h:3}]},
+ king:{n:'Frostkönig',e:'👑',hp:[140,140],mv:[{frost:3,blk:12},{n:16},{n:7,h:3},{n:6,weak:2,vuln:2}]}
+};
+const REGIONS=[
+ {n:'Düsterwald',sub:'Gift und Rudel',col:'#6fbf73',e:'🌲',
+  intro:'Gegner vergiften dich und greifen in Gruppen an. Gift tickt jede Runde, also lohnt es sich, Angreifer schnell auszuschalten.',
+  easy:[['rat','rat'],['shroom','rat'],['wolf']],hard:[['rat','rat','rat'],['wolf','rat'],['shroom','shroom'],['wolf','shroom']],elites:[['moss']],boss:['mother']},
+ {n:'Aschewüste',sub:'Glut und Brandmale',col:'#e8833a',e:'🏜️',
+  intro:'Gegner mischen Brand-Karten in dein Deck. Hast du sie am Rundenende auf der Hand, verbrennen sie dich. Spiele also, was du kannst, oder halte Block bereit.',
+  easy:[['scorp'],['spark','spark'],['worm']],hard:[['spark','scorp'],['spark','spark','spark'],['worm','spark']],elites:[['priest']],boss:['colossus']},
+ {n:'Frostfestung',sub:'Panzer und Frost',col:'#7cc4f0',e:'🏔️',
+  intro:'Gegner schützen sich mit viel Block und verstopfen deine Hand mit Frost. Brich Panzerungen mit hohem Schaden oder mit Gift, das Block umgeht.',
+  easy:[['guard'],['elem','elem'],['giant']],hard:[['guard','elem'],['elem','guard','elem'],['giant','elem']],elites:[['knight']],boss:['king']}
+];
+
+let G=null,C=null;
+const P={isP:true,get hp(){return G.hp},set hp(v){G.hp=v},st:{},blk:0};
+
+function newRun(){
+ G={hp:75,max:75,gold:60,reg:0,relics:[],cur:null,vis:new Set(),stat:{nodes:0,fights:0,elites:0},
+  deck:[...Array(5).fill('strike'),...Array(4).fill('defend'),'bash'].map(id=>({id}))};
+ G.map=genMap();
+ return G;
+}
+
+/* ---------- Karte ---------- */
+function genMap(){
+ const ROWS=8,COLS=5,nodes=[],rows=[];
+ for(let r=0;r<ROWS;r++){
+  const k=r===ROWS-1?rnd(2,3):rnd(3,4);
+  const cols=shuffle([0,1,2,3,4]).slice(0,k).sort((a,b)=>a-b);
+  rows.push(cols.map(c=>{const n={id:nodes.length,r,c,type:'fight',next:[]};nodes.push(n);return n}));
+ }
+ const boss={id:nodes.length,r:ROWS,c:2,type:'boss',next:[]};
+ nodes.push(boss);rows.push([boss]);
+ for(let r=0;r<ROWS;r++){
+  const A=rows[r],B=rows[r+1];
+  for(const a of A){
+   let t=B.filter(b=>Math.abs(b.c-a.c)<=1);
+   if(!t.length){const m=Math.min(...B.map(b=>Math.abs(b.c-a.c)));t=B.filter(b=>Math.abs(b.c-a.c)===m)}
+   a.next=shuffle(t.slice()).slice(0,2).map(b=>b.id);
+  }
+  for(const b of B){
+   if(!A.some(a=>a.next.includes(b.id))){
+    const m=Math.min(...A.map(a=>Math.abs(a.c-b.c)));
+    pick(A.filter(a=>Math.abs(a.c-b.c)===m)).next.push(b.id);
+   }
+  }
+ }
+ for(const n of nodes){
+  if(n.type==='boss')continue;
+  if(n.r===0)n.type='fight';
+  else if(n.r===ROWS-1)n.type='rest';
+  else{
+   const w={fight:46,event:18,shop:8,rest:13,elite:n.r>=3?14:0};
+   if(n.r<2){w.rest=0;w.shop=0}
+   if(n.r===ROWS-2)w.rest=0;
+   n.type=wpick(w);
+  }
+ }
+ const force=(type,lo,hi)=>{
+  if(!nodes.some(n=>n.type===type&&n.r>=lo&&n.r<=hi))pick(nodes.filter(n=>n.r>=lo&&n.r<=hi)).type=type;
+ };
+ force('shop',2,5);force('elite',3,6);force('rest',2,5);
+ return{nodes,rows,ROWS,COLS};
+}
+const avail=()=>G.cur==null?G.map.rows[0].map(n=>n.id):G.map.nodes[G.cur].next;
+function enterNode(id){const n=G.map.nodes[id];G.cur=id;G.vis.add(id);G.stat.nodes++;return n}
+function encounter(n){
+ const R=REGIONS[G.reg];
+ if(n.type==='boss')return R.boss.slice();
+ if(n.type==='elite')return pick(R.elites).slice();
+ return pick(n.r<=2?R.easy:R.hard).slice();
+}
+
+/* ---------- Kampf ---------- */
+function calc(base,a,d){
+ let v=base+(a.st.str||0);
+ if(a.st.weak)v=Math.floor(v*.75);
+ if(d.st.vuln)v=Math.floor(v*1.5);
+ return Math.max(0,v);
+}
+function fx(t,txt,cls){if(C)C.fx.push({k:t.isP?'p':'e'+t.i,t:txt,c:cls})}
+function log(s){C.log.push(s);if(C.log.length>12)C.log.shift()}
+function addSt(t,k,v){t.st[k]=(t.st[k]||0)+v;fx(t,`${STI[k]}+${v}`,'st')}
+function hit(src,tgt,base,raw){
+ const v=raw?base:calc(base,src,tgt);
+ const ab=Math.min(tgt.blk,v);tgt.blk-=ab;
+ const loss=v-ab;tgt.hp-=loss;
+ fx(tgt,loss>0?'-'+loss:ab>0?'🛡️'+ab:'0',loss>0?'dmg':'blk');
+ if(!raw&&tgt.isP&&tgt.st.thorns&&src&&!src.isP){
+  src.hp-=tgt.st.thorns;fx(src,'-'+tgt.st.thorns,'dmg');
+  if(src.hp<=0)src.dead=true;
+ }
+ if(!tgt.isP&&tgt.hp<=0)tgt.dead=true;
+ return loss;
+}
+function chk(){
+ for(const e of C.en)if(e.hp<=0)e.dead=true;
+ if(P.hp<=0){C.over='lose';return}
+ if(C.en.every(e=>e.dead))C.over='win';
+}
+function setIntent(e){e.intent=e.d.mv[e.mi%e.d.mv.length]}
+function startCombat(list,kind){
+ const en=list.map((k,i)=>{
+  const d=EN[k],hp=rnd(d.hp[0],d.hp[1]);
+  return{i,k,d,hp,max:hp,blk:0,st:{},mi:kind==='fight'?rnd(0,d.mv.length-1):0,intent:null,dead:false};
+ });
+ P.st={};P.blk=0;
+ C={en,draw:shuffle(G.deck.map(c=>({...c}))),hand:[],disc:[],exh:[],energy:0,max:3,turn:0,log:[],fx:[],kind,over:null};
+ if(G.relics.includes('core'))C.max=4;
+ if(G.relics.includes('anchor'))P.blk=8;
+ if(G.relics.includes('ruby'))P.st.str=1;
+ en.forEach(setIntent);
+ log(en.map(e=>e.d.n).join(', ')+' stellen sich dir in den Weg.');
+ startTurn();
+ return C;
+}
+function draw(n){
+ for(let i=0;i<n;i++){
+  if(C.hand.length>=10)break;
+  if(!C.draw.length){if(!C.disc.length)break;C.draw=shuffle(C.disc);C.disc=[]}
+  C.hand.push(C.draw.pop());
+ }
+}
+function startTurn(){
+ C.turn++;
+ if(C.turn>1)P.blk=0;
+ if(P.st.psn){const d=P.st.psn;P.hp-=d;fx(P,'-'+d,'dmg');P.st.psn--;if(!P.st.psn)delete P.st.psn;log(`Gift: ${d} Schaden.`)}
+ chk();if(C.over)return;
+ C.energy=C.max;
+ draw(5+(G.relics.includes('lens')?1:0));
+}
+const stats_c=i=>stats(C.hand[i]);
+function canPlay(i){const c=C.hand[i];if(!c||C.over)return false;const s=stats(c);return !s.unp&&s.c<=C.energy}
+function needsTarget(c){const s=stats(c);return !!(s.dmg||s.bdmg||s.psn||s.weak||s.vuln||s.dblpsn)&&!s.aoe}
+function playCard(i,ti){
+ if(!canPlay(i))return false;
+ const c=C.hand.splice(i,1)[0],s=stats(c);
+ C.energy-=s.c;
+ const alive=C.en.filter(e=>!e.dead);
+ let tg=s.aoe?alive:[(ti!=null&&C.en[ti]&&!C.en[ti].dead)?C.en[ti]:alive[0]];
+ if(s.dmg||s.bdmg){
+  for(const t of tg)for(let h=0;h<(s.hits||1);h++){
+   if(t.dead)break;
+   hit(P,t,s.bdmg?P.blk:s.dmg);
+  }
+ }
+ if(s.blk){P.blk+=s.blk;fx(P,'🛡️'+s.blk,'blk')}
+ if(s.thorns)addSt(P,'thorns',s.thorns);
+ if(s.str)addSt(P,'str',s.str);
+ for(const t of tg){
+  if(t.dead)continue;
+  if(s.psn)addSt(t,'psn',s.psn);
+  if(s.weak)addSt(t,'weak',s.weak);
+  if(s.vuln)addSt(t,'vuln',s.vuln);
+  if(s.dblpsn&&t.st.psn){t.st.psn*=2;fx(t,'🧪×2','st')}
+ }
+ if(s.heal){const h=Math.min(s.heal,G.max-G.hp);G.hp+=h;fx(P,'+'+h,'heal')}
+ if(s.hpl){P.hp-=s.hpl;fx(P,'-'+s.hpl,'dmg')}
+ if(s.en)C.energy+=s.en;
+ if(s.draw)draw(s.draw);
+ if(s.exh||s.t==='p')C.exh.push(c);else C.disc.push(c);
+ chk();
+ return true;
+}
+function playerEnd(){
+ for(const c of C.hand)if(c.id==='burn'){hit(null,P,2,true);log('Brand: 2 Schaden.')}
+ for(const c of C.hand){if(CARDS[c.id].eth)C.exh.push(c);else C.disc.push(c)}
+ C.hand=[];
+ for(const k of['weak','vuln'])if(P.st[k]){P.st[k]--;if(!P.st[k])delete P.st[k]}
+ chk();
+}
+function addJunk(id,n){
+ for(let i=0;i<n;i++)C.disc.push({id});
+ fx(P,(id==='burn'?'🔥':'❄️')+'+'+n,'st');
+}
+function enemyPhase(){
+ for(const e of C.en){
+  if(e.dead)continue;
+  e.blk=0;
+  if(e.st.psn){
+   e.hp-=e.st.psn;fx(e,'-'+e.st.psn,'dmg');e.st.psn--;if(!e.st.psn)delete e.st.psn;
+   if(e.hp<=0){e.dead=true;continue}
+  }
+  const m=e.intent;
+  if(m.blk){e.blk+=m.blk;fx(e,'🛡️'+m.blk,'blk')}
+  if(m.str){e.st.str=(e.st.str||0)+m.str;fx(e,'💪+'+m.str,'st')}
+  if(m.heal){e.hp=Math.min(e.max,e.hp+m.heal);fx(e,'+'+m.heal,'heal')}
+  if(m.n!==undefined){
+   let tot=0;
+   for(let h=0;h<(m.h||1);h++){tot+=hit(e,P,m.n);if(P.hp<=0||e.dead)break}
+   log(tot>0?`${e.d.n} trifft dich für ${tot}.`:`${e.d.n} greift an, dein Block hält.`);
+  }
+  if(e.dead){chk();if(C.over)return;continue}
+  if(P.hp>0){
+   if(m.weak)addSt(P,'weak',m.weak);
+   if(m.vuln)addSt(P,'vuln',m.vuln);
+   if(m.psn)addSt(P,'psn',m.psn);
+   if(m.burn)addJunk('burn',m.burn);
+   if(m.frost)addJunk('frost',m.frost);
+  }
+  for(const k of['weak','vuln'])if(e.st[k]){e.st[k]--;if(!e.st[k])delete e.st[k]}
+  e.mi++;setIntent(e);
+  chk();if(C.over)return;
+ }
+}
+function endTurn(){
+ playerEnd();
+ if(!C.over)enemyPhase();
+ if(!C.over)startTurn();
+}
+
+/* ---------- Belohnungen, Laden, Ereignisse ---------- */
+function randRelic(){const p=Object.keys(RELICS).filter(k=>!G.relics.includes(k));return p.length?pick(p):null}
+function cardChoices(kind){
+ const W=kind==='boss'?{r:1}:kind==='elite'?{c:35,u:45,r:20}:{c:60,u:32,r:8};
+ const out=[];
+ while(out.length<3){
+  const rar=wpick(W),pool=Object.keys(CARDS).filter(k=>CARDS[k].r===rar&&!out.includes(k));
+  out.push(pick(pool));
+ }
+ return out.map(id=>({id}));
+}
+const rareChoices=()=>cardChoices('boss');
+function rewards(kind){
+ let g=kind==='boss'?50:kind==='elite'?rnd(25,35):rnd(10,18);
+ if(G.relics.includes('coin'))g=Math.floor(g*1.5);
+ G.gold+=g;
+ if(G.relics.includes('tea'))G.hp=Math.min(G.max,G.hp+6);
+ let relic=null;
+ if(kind!=='fight'){relic=randRelic();if(relic)G.relics.push(relic)}
+ G.stat[kind==='elite'?'elites':'fights']++;
+ return{gold:g,relic,cards:cardChoices(kind),kind};
+}
+function advanceRegion(){
+ G.hp=Math.min(G.max,G.hp+Math.floor(G.max*.4));
+ if(G.reg>=REGIONS.length-1)return'win';
+ G.reg++;G.map=genMap();G.cur=null;G.vis=new Set();
+ return'next';
+}
+function genShop(){
+ const pr={c:45,u:75,r:125},cards=[];
+ while(cards.length<5){
+  const rar=wpick({c:55,u:33,r:12}),id=pick(Object.keys(CARDS).filter(k=>CARDS[k].r===rar));
+  if(cards.some(x=>x.c.id===id))continue;
+  cards.push({c:{id},price:pr[rar]+rnd(-6,6),sold:0});
+ }
+ const rl=randRelic();
+ return{cards,relic:rl?{id:rl,price:130,sold:0}:null,rm:55};
+}
+const restHeal=()=>Math.floor(G.max*.3);
+const canUp=()=>G.deck.some(upgradable);
+const eligible=(mode,c)=>mode==='upgrade'?upgradable(c):true;
+function applyPick(mode,idx,cost){
+ const c=G.deck[idx];
+ G.gold-=cost||0;
+ if(mode==='upgrade'){c.up=true;return`${stats(c).n} wurde verbessert.`}
+ if(mode==='remove'){G.deck.splice(idx,1);return`${CARDS[c.id].n} wurde aus dem Deck entfernt.`}
+ const nid=pick(Object.keys(CARDS).filter(k=>CARDS[k].r==='r'));
+ G.deck.splice(idx,1,{id:nid});
+ return`${CARDS[c.id].n} wird zu ${CARDS[nid].n}.`;
+}
+const EVENTS=[
+ {t:'Blutaltar',e:'🗿',x:'Ein Altar aus rotem Stein. In der Schale auf seiner Spitze steht noch Wasser, das nach Eisen riecht.',o:[
+  {l:'Opfere 8 LP und wähle eine seltene Karte',ok:()=>G.hp>10,f:()=>{G.hp-=8;return{reward:rareChoices()}}},
+  {l:'Weitergehen',f:()=>({msg:'Du lässt den Altar hinter dir.'})}]},
+ {t:'Heilquelle',e:'⛲',x:'Klares Wasser sprudelt zwischen den Steinen hervor, kalt und süß.',o:[
+  {l:'Trinken: heile 20 LP',f:()=>{const h=Math.min(20,G.max-G.hp);G.hp+=h;return{msg:`Du heilst ${h} LP.`}}},
+  {l:'Baden: +6 maximale LP',f:()=>{G.max+=6;G.hp+=6;return{msg:'Du fühlst dich robuster. +6 max. LP.'}}}]},
+ {t:'Verschlossene Truhe',e:'🧰',x:'Eine Truhe liegt halb im Dreck. Auf dem Deckel sind Zeichen eingeritzt, die du nicht kennst.',o:[
+  {l:'Öffnen (50 % 90 Gold, 50 % Fluch)',f:()=>Math.random()<.5?(G.gold+=90,{msg:'Gold! Du findest 90 Gold.'}):(G.deck.push({id:'curse'}),{msg:'Ein Fluch fährt in dein Deck: die Karte Last.'})},
+  {l:'Liegen lassen',f:()=>({msg:'Klüger so, vielleicht.'})}]},
+ {t:'Wanderschmied',e:'⚒️',x:'Ein Schmied hat seinen Amboss am Wegrand aufgebaut und wärmt sich die Hände an der Esse.',o:[
+  {l:'Karte verbessern (30 Gold)',ok:()=>G.gold>=30&&canUp(),f:()=>({pick:'upgrade',cost:30})},
+  {l:'Karte entfernen (40 Gold)',ok:()=>G.gold>=40&&G.deck.length>5,f:()=>({pick:'remove',cost:40})},
+  {l:'Weitergehen',f:()=>({msg:'Der Schmied nickt dir zu.'})}]},
+ {t:'Würfler',e:'🎲',x:'Ein Mann schüttelt drei Würfel im Becher. „Vierzig Gold, ich zahle hundert. Wenn du Glück hast.“',o:[
+  {l:'40 Gold setzen: 50 % auf 100 Gold',ok:()=>G.gold>=40,f:()=>{G.gold-=40;if(Math.random()<.5){G.gold+=100;return{msg:'Gewonnen! +100 Gold.'}}return{msg:'Verloren. Der Mann grinst.'}}},
+  {l:'Weitergehen',f:()=>({msg:'Du lässt die Würfel liegen.'})}]},
+ {t:'Tauschhändler',e:'🧙',x:'Eine vermummte Gestalt bietet an, eine deiner Karten gegen etwas Seltenes zu tauschen. Was genau, sagt sie nicht.',o:[
+  {l:'Eine Karte gegen eine zufällige seltene tauschen',f:()=>({pick:'trade'})},
+  {l:'Weitergehen',f:()=>({msg:'Die Gestalt verschwindet im Nebel.'})}]}
+];
+/*LOGIC_END*/
+
+/* ================= Oberfläche ================= */
+let S={screen:'title',busy:false,sel:null,ov:false};
+const $app=document.getElementById('app');
+const NODEI={fight:'⚔️',elite:'💀',event:'❓',rest:'🏕️',shop:'🛒'};
+const TYPEL={a:'Angriff',s:'Fertigkeit',p:'Kraft',x:'Status'};
+
+function bestLoad(){try{return JSON.parse(localStorage.getItem('verlorene-lande-best'))}catch(e){return null}}
+function bestSave(){
+ try{
+  const sc=(S.win?3:G.reg)*100+G.stat.nodes,b=bestLoad();
+  if(!b||sc>b.sc)localStorage.setItem('verlorene-lande-best',JSON.stringify({sc,reg:S.win?3:G.reg+1,win:!!S.win,nodes:G.stat.nodes}));
+ }catch(e){}
+}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2700)}
+
+function bar(noHp){
+ const r=REGIONS[G.reg];
+ return`<div class="bar"><div class="reg">${r.n}<small>${r.sub} · Gebiet ${G.reg+1} von 3</small></div><div class="stats">${noHp?'':`<span class="stat">❤️ ${G.hp}/${G.max}</span>`}<span class="stat">🪙 ${G.gold}</span><div class="relics">${G.relics.map(id=>`<span class="relic" title="${RELICS[id].n}: ${RELICS[id].d}">${RELICS[id].e}</span>`).join('')}</div><button class="btn ghost" data-a="deck">Deck (${G.deck.length})</button></div></div>`;
+}
+function cardHTML(c,o={}){
+ const s=stats(c),tag=o.tag||'button';
+ return`<${tag} class="card t-${s.t}${c.up?' up':''}${o.sel?' sel':''}" ${o.attrs||''} ${o.dis?'disabled':''}><span class="cost">${s.unp?'×':s.c}</span><span class="cn">${s.n}${c.up?'+':''}</span><span class="ct">${TYPEL[s.t]}</span><span class="ci">${s.e}</span><span class="cx">${cardText(s)}</span></${tag}>`;
+}
+function chips(st){
+ return Object.keys(ST).filter(k=>st[k]>0).map(k=>`<span class="chip" title="${ST[k]}: ${STD[k]}">${STI[k]} ${st[k]}</span>`).join('');
+}
+function intentHTML(e){
+ const m=e.intent,o=[];
+ if(m.n!==undefined)o.push(`<span title="Angriff">⚔️ ${calc(m.n,e,P)}${m.h>1?'×'+m.h:''}</span>`);
+ if(m.blk)o.push(`<span title="Block">🛡️ ${m.blk}</span>`);
+ if(m.str)o.push(`<span title="Stärke">💪 +${m.str}</span>`);
+ if(m.heal)o.push(`<span title="Heilung">💚 ${m.heal}</span>`);
+ if(m.weak)o.push(`<span title="Schwäche auf dich">🥀 ${m.weak}</span>`);
+ if(m.vuln)o.push(`<span title="Verwundbar auf dich">🎯 ${m.vuln}</span>`);
+ if(m.psn)o.push(`<span title="Gift auf dich">🧪 ${m.psn}</span>`);
+ if(m.burn)o.push(`<span title="Brand-Karten in dein Deck">🔥 +${m.burn}</span>`);
+ if(m.frost)o.push(`<span title="Frost-Karten in dein Deck">❄️ +${m.frost}</span>`);
+ return o.join('');
+}
+function enHTML(e,tg){
+ return`<div class="en${e.dead?' dead':''}${tg?' tg':''}" data-k="e${e.i}" ${tg?`data-a="target" data-v="${e.i}"`:''}>
+  <div class="intent">${e.dead?'':intentHTML(e)}</div><div class="sprite">${e.d.e}</div><div class="nm">${e.d.n}</div>
+  <div class="hp"><i style="width:${Math.max(0,e.hp)/e.max*100}%"></i><b>${Math.max(0,e.hp)}/${e.max}</b></div>
+  <div class="chips">${e.blk?`<span class="chip blkc">🛡️ ${e.blk}</span>`:''}${chips(e.st)}</div></div>`;
+}
+function applyFx(){
+ if(!C||!C.fx.length)return;
+ const cnt={};
+ for(const f of C.fx){
+  const el=$app.querySelector(`[data-k="${f.k}"]`);
+  if(!el)continue;
+  const n=cnt[f.k]=(cnt[f.k]||0)+1;
+  const s=document.createElement('span');
+  s.className='fl '+f.c;s.textContent=f.t;
+  s.style.animationDelay=((n-1)*.22)+'s';
+  s.style.top=(34+((n-1)%3)*-8)+'%';
+  el.appendChild(s);
+  if(f.c==='dmg'&&n===1){el.classList.add('shake')}
+ }
+ C.fx=[];
+}
+
+function rTitle(){
+ const b=bestLoad();
+ $app.innerHTML=`<div class="title"><div class="kicker">Ein Deckbuilder-Roguelike</div><h1>Verlorene Lande</h1>
+ <p class="lead">Drei Gebiete, ein Deck, das du unterwegs selbst schmiedest, und am Ende jedes Weges ein Boss.</p>
+ <ul class="how"><li>Jede Runde: 3 Energie, 5 Karten. Gegner zeigen dir, was sie als Nächstes tun.</li><li>Auf der Karte wählst du deinen Weg: Kämpfe, Händler, Rastplätze und Ereignisse.</li><li>Stirbst du, beginnt ein neuer Lauf.</li></ul>
+ <button class="btn" data-a="new">Lauf beginnen</button>
+ ${b?`<p class="best">Bestleistung: ${b.win?'alle drei Gebiete bezwungen':`Gebiet ${b.reg}, ${b.nodes} Orte`}</p>`:''}</div>`;
+}
+function rIntro(){
+ const r=REGIONS[G.reg];
+ $app.innerHTML=bar()+`<div class="panel"><div class="big">${r.e}</div><h2>${r.n}</h2><p class="small">${r.sub}</p><p style="max-width:34em;text-align:center">${r.intro}</p><button class="btn" data-a="go-map">Weiter</button></div>`;
+}
+function rMap(){
+ const M=G.map,W=420,H=640,pos=n=>({x:(n.c+.5)/M.COLS*W,y:H-40-n.r*(H-80)/M.ROWS});
+ const av=new Set(avail());
+ let lines='',nds='';
+ for(const n of M.nodes)for(const id of n.next){
+  const a=pos(n),b=pos(M.nodes[id]);
+  lines+=`<line class="${G.cur===n.id?'on':''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+ }
+ for(const n of M.nodes){
+  const p=pos(n),boss=n.type==='boss',ic=boss?EN[REGIONS[G.reg].boss[0]].e:NODEI[n.type];
+  const cls=[boss?'boss':'',av.has(n.id)?'av':'',G.vis.has(n.id)?'vis':'',G.cur===n.id?'cur':''].join(' ');
+  nds+=`<g class="nd ${cls}" ${av.has(n.id)?`data-a="node" data-v="${n.id}" role="button" tabindex="0" aria-label="${n.type}"`:''} transform="translate(${p.x},${p.y})"><circle r="${boss?31:22}"/><text y="${boss?10:7}" text-anchor="middle" font-size="${boss?30:20}">${ic}</text></g>`;
+ }
+ $app.innerHTML=bar()+`<div class="mapwrap"><svg class="map" viewBox="0 0 ${W} ${H}">${lines}${nds}</svg><p class="legendline">⚔️ Kampf · 💀 Elite · ❓ Ereignis · 🏕️ Rast · 🛒 Händler</p></div>`;
+}
+function rCombat(){
+ const sc=S.sel!=null&&C.hand[S.sel]?C.hand[S.sel]:null;
+ const needT=sc&&needsTarget(sc);
+ $app.innerHTML=bar(true)
+ +`<div class="enemies">${C.en.map(e=>enHTML(e,needT&&!e.dead)).join('')}</div>`
+ +`<div class="log" aria-live="polite">${C.log.slice(-3).map(t=>`<div>${t}</div>`).join('')}</div>`
+ +`<div class="me" data-k="p"><div class="orb" title="Energie">${C.energy}<small>/${C.max}</small></div>
+   <div class="mid"><div class="hp lg"><i style="width:${Math.max(0,G.hp)/G.max*100}%"></i><b>❤️ ${Math.max(0,G.hp)}/${G.max}</b></div><div class="chips">${P.blk?`<span class="chip blkc">🛡️ ${P.blk}</span>`:''}${chips(P.st)}</div></div>
+   <div class="piles">Runde ${C.turn}<br>Ziehstapel ${C.draw.length} · Ablage ${C.disc.length}</div>
+   <button class="btn" data-a="end" ${S.busy?'disabled':''}>Zug beenden</button></div>`
+ +(needT?'<p class="hint">Wähle ein Ziel.</p>':'<p class="hint">&nbsp;</p>')
+ +`<div class="hand">${C.hand.map((c,i)=>cardHTML(c,{attrs:`data-a="card" data-v="${i}"`,dis:S.busy||!canPlay(i),sel:S.sel===i})).join('')}</div>`
+ +`<details class="legend"><summary>Zeichen erklärt</summary><p>${Object.keys(ST).map(k=>`${STI[k]} <b>${ST[k]}</b>: ${STD[k]}`).join('<br>')}<br>⚔️ Angriff · 🛡️ Block (hält Schaden ab, verfällt zu Rundenbeginn)</p></details>`;
+ applyFx();
+}
+function rReward(){
+ const R=S.reward;
+ $app.innerHTML=bar()+`<div class="panel"><h2>${R.kind==='event'?R.title:'Sieg'}</h2>
+ ${R.gold?`<p class="gain">+${R.gold} Gold</p>`:''}
+ ${R.relic?`<div class="relicgain"><span>${RELICS[R.relic].e}</span><div><b>${RELICS[R.relic].n}</b><br>${RELICS[R.relic].d}</div></div>`:''}
+ <p>Wähle eine Karte für dein Deck.</p>
+ <div class="grid">${R.cards.map((c,i)=>cardHTML(c,{attrs:`data-a="take" data-v="${i}"`})).join('')}</div>
+ <button class="btn ghost" data-a="skip">Überspringen</button></div>`;
+}
+function rShop(){
+ const sh=S.shop;
+ $app.innerHTML=bar()+`<div class="panel"><div class="big">🛒</div><h2>Händler</h2>
+ <div class="grid">${sh.cards.map((it,i)=>`<div class="item${it.sold?' sold':''}">${cardHTML(it.c,{tag:'div'})}<button class="btn ghost" data-a="buy" data-v="${i}" ${it.sold||G.gold<it.price?'disabled':''}><span class="price${G.gold<it.price?' no':''}">🪙 ${it.price}</span></button></div>`).join('')}</div>
+ ${sh.relic?`<div class="relicgain"><span>${RELICS[sh.relic.id].e}</span><div><b>${RELICS[sh.relic.id].n}</b><br>${RELICS[sh.relic.id].d}</div><button class="btn ghost" data-a="buy-relic" ${sh.relic.sold||G.gold<sh.relic.price?'disabled':''}>🪙 ${sh.relic.price}</button></div>`:''}
+ <div class="row"><button class="btn ghost" data-a="shop-remove" ${G.gold<sh.rm||G.deck.length<=5?'disabled':''}>Karte entfernen · 🪙 ${sh.rm}</button><button class="btn" data-a="leave">Weiterziehen</button></div></div>`;
+}
+function rRest(){
+ $app.innerHTML=bar()+`<div class="panel"><div class="big">🏕️</div><h2>Rastplatz</h2><p class="small">Ein Feuer, das noch warm ist.</p>
+ <div class="row"><button class="btn" data-a="rest-heal">Ausruhen: heile ${restHeal()} LP</button><button class="btn" data-a="rest-up" ${canUp()?'':'disabled'}>Schmieden: Karte verbessern</button></div></div>`;
+}
+function rEvent(){
+ const ev=S.ev,d=ev.def;
+ $app.innerHTML=bar()+`<div class="panel"><div class="big">${d.e}</div><h2>${d.t}</h2><p style="max-width:34em;text-align:center">${d.x}</p>
+ ${ev.res?`<p class="gain" style="font-size:1.3rem;text-align:center">${ev.res}</p><button class="btn" data-a="go-map">Weiter</button>`
+ :`<div class="opts">${d.o.map((o,i)=>`<button class="btn ghost" data-a="opt" data-v="${i}" ${o.ok&&!o.ok()?'disabled':''}>${o.l}</button>`).join('')}</div>`}</div>`;
+}
+function rPick(){
+ const p=S.pick;
+ const t={upgrade:'Wähle eine Karte zum Verbessern.',remove:'Wähle eine Karte zum Entfernen'+(p.cost?` (${p.cost} Gold)`:'')+'.',trade:'Wähle eine Karte zum Tauschen.'}[p.mode];
+ const items=G.deck.map((c,i)=>({c,i})).sort((a,b)=>stats(a.c).t.localeCompare(stats(b.c).t)||stats(a.c).n.localeCompare(stats(b.c).n));
+ $app.innerHTML=bar()+`<div class="panel" style="max-width:none"><h2>${t}</h2><div class="grid">${items.map(({c,i})=>cardHTML(c,{attrs:`data-a="pick" data-v="${i}"`,dis:!eligible(p.mode,c)})).join('')}</div><button class="btn ghost" data-a="cancel">Zurück</button></div>`;
+}
+function rEnd(){
+ $app.innerHTML=bar()+`<div class="panel"><div class="big">${S.win?'👑':'🪦'}</div><h1 style="font-size:clamp(2rem,7vw,3.2rem)">${S.win?'Die Lande sind befreit':'Dein Lauf endet hier'}</h1>
+ <p>${S.win?'Alle drei Gebiete bezwungen.':`Gefallen in ${REGIONS[G.reg].n}.`} ${G.stat.nodes} Orte besucht, ${G.stat.fights+G.stat.elites} Kämpfe gewonnen, ${G.deck.length} Karten im Deck.</p>
+ <button class="btn" data-a="new">Neuer Lauf</button></div>`;
+}
+function overlayHTML(){
+ const items=G.deck.slice().sort((a,b)=>stats(a).t.localeCompare(stats(b).t)||stats(a).n.localeCompare(stats(b).n));
+ return`<div class="ov"><div class="ovin"><div class="row between"><h2>Dein Deck (${G.deck.length})</h2><button class="btn" data-a="close">Schließen</button></div>
+ <div class="grid">${items.map(c=>cardHTML(c,{tag:'div'})).join('')}</div>
+ ${G.relics.length?`<h3>Relikte</h3><div class="rl">${G.relics.map(id=>`<div><span style="font-size:1.5rem">${RELICS[id].e}</span><span><b>${RELICS[id].n}</b>: ${RELICS[id].d}</span></div>`).join('')}</div>`:''}</div></div>`;
+}
+function render(){
+ const g=G?REGIONS[G.reg].col:'#c8b27a';
+ document.documentElement.style.setProperty('--acc',g);
+ ({title:rTitle,intro:rIntro,map:rMap,combat:rCombat,reward:rReward,shop:rShop,rest:rRest,event:rEvent,pick:rPick,end:rEnd})[S.screen]();
+ if(S.ov&&G)$app.insertAdjacentHTML('beforeend',overlayHTML());
+}
+
+/* ---------- Ablauf ---------- */
+function goNode(id){
+ const n=enterNode(id);
+ S.sel=null;
+ if(n.type==='fight'||n.type==='elite'||n.type==='boss'){startCombat(encounter(n),n.type);S.screen='combat'}
+ else if(n.type==='shop'){S.shop=genShop();S.screen='shop'}
+ else if(n.type==='rest'){S.screen='rest'}
+ else{S.ev={def:pick(EVENTS),res:null};S.screen='event'}
+ render();
+}
+function afterNode(){
+ const n=G.map.nodes[G.cur];
+ if(n.type==='boss'){
+  const r=advanceRegion();
+  if(r==='win'){S.win=true;bestSave();S.screen='end'}else S.screen='intro';
+ }else S.screen='map';
+ render();
+}
+function finishCombat(){
+ S.busy=true;
+ setTimeout(()=>{
+  S.busy=false;
+  if(C.over==='win'){S.reward=rewards(C.kind);S.screen='reward'}
+  else{S.win=false;bestSave();S.screen='end'}
+  render();
+ },900);
+}
+function doEnd(){
+ S.busy=true;S.sel=null;
+ playerEnd();render();
+ if(C.over)return finishCombat();
+ setTimeout(()=>{
+  enemyPhase();render();
+  if(C.over)return finishCombat();
+  setTimeout(()=>{startTurn();S.busy=false;render();if(C.over)finishCombat()},650);
+ },450);
+}
+function play(i,t){
+ S.sel=null;playCard(i,t);render();
+ if(C.over)finishCombat();
+}
+function evOpt(i){
+ const r=S.ev.def.o[i].f();
+ if(r.msg){S.ev.res=r.msg}
+ else if(r.pick){S.pick={mode:r.pick,cost:r.cost||0,from:'event'};S.screen='pick'}
+ else if(r.reward){S.reward={gold:0,relic:null,cards:r.reward,kind:'event',title:S.ev.def.t};S.screen='reward'}
+ render();
+}
+function doPick(idx){
+ const p=S.pick;
+ if(!eligible(p.mode,G.deck[idx]))return;
+ const msg=applyPick(p.mode,idx,p.cost);
+ if(p.from==='rest'){S.screen='map';toast(msg)}
+ else if(p.from==='shop'){S.shop.rm+=25;S.screen='shop';toast(msg)}
+ else{S.ev.res=msg;S.screen='event'}
+ render();
+}
+function act(a,v){
+ switch(a){
+  case'new':newRun();S.win=false;S.sel=null;S.busy=false;S.ov=false;S.screen='intro';render();break;
+  case'go-map':S.screen='map';render();break;
+  case'node':goNode(+v);break;
+  case'card':{
+   if(S.busy||C.over)break;
+   const i=+v;if(!canPlay(i))break;
+   if(needsTarget(C.hand[i])){
+    const alive=C.en.filter(e=>!e.dead);
+    if(alive.length===1)play(i,alive[0].i);else{S.sel=S.sel===i?null:i;render()}
+   }else play(i);
+   break;
+  }
+  case'target':if(S.sel!=null)play(S.sel,+v);break;
+  case'end':if(!S.busy&&!C.over)doEnd();break;
+  case'deck':S.ov=true;render();break;
+  case'close':S.ov=false;render();break;
+  case'take':G.deck.push({id:S.reward.cards[+v].id});afterNode();break;
+  case'skip':afterNode();break;
+  case'buy':{const it=S.shop.cards[+v];if(!it.sold&&G.gold>=it.price){G.gold-=it.price;it.sold=1;G.deck.push({id:it.c.id});render()}break}
+  case'buy-relic':{const r=S.shop.relic;if(r&&!r.sold&&G.gold>=r.price){G.gold-=r.price;r.sold=1;G.relics.push(r.id);render()}break}
+  case'shop-remove':if(G.gold>=S.shop.rm){S.pick={mode:'remove',cost:S.shop.rm,from:'shop'};S.screen='pick';render()}break;
+  case'leave':S.screen='map';render();break;
+  case'rest-heal':G.hp=Math.min(G.max,G.hp+restHeal());S.screen='map';render();break;
+  case'rest-up':S.pick={mode:'upgrade',cost:0,from:'rest'};S.screen='pick';render();break;
+  case'opt':evOpt(+v);break;
+  case'pick':doPick(+v);break;
+  case'cancel':S.screen=S.pick.from==='shop'?'shop':S.pick.from==='event'?'event':'rest';render();break;
+ }
+}
+$app.addEventListener('click',ev=>{
+ const t=ev.target.closest('[data-a]');
+ if(!t||t.disabled)return;
+ act(t.dataset.a,t.dataset.v);
+});
+$app.addEventListener('keydown',ev=>{
+ if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches&&ev.target.matches('g[data-a]')){ev.preventDefault();act(ev.target.dataset.a,ev.target.dataset.v)}
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&S.ov){S.ov=false;render()}});
+render();
+</script>
+</body>
+</html>

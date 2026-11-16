@@ -1,0 +1,16 @@
+# Rust build output
+/target/
+
+# Trunk build output
+/dist/
+/ui/dist/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Local Claude Code settings
+.claude/settings.local.json
