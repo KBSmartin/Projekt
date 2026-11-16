@@ -11,7 +11,9 @@ Deckbuilder-Roguelike als reine Web-App (Rust + WebAssembly, statisch auf Cloudf
 - `sim/`: natives Kommandozeilenprogramm für die Bot-Simulation.
 - `data/`: Spielinhalte als JSON (per serde geladen, in die engine eingebettet). Neue Inhalte sind neue Einträge, kein neuer Code.
 
-Die Portierung bleibt regeltreu zum Prototyp, auch bei seinen Eigenheiten. Solche Stellen tragen im Code den Kommentar `Prototype quirk` und werden nur nach Absprache geändert.
+Die Portierung bleibt regeltreu zum Prototyp. Bewusste Abweichungen tragen im Code den Kommentar `Fix:`.
+
+Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`; die ui rendert nur `Run::phase` und ruft Aktionen auf. `engine::bot` spielt Läufe über dieselben Aktionen (Tests und `sim`).
 
 **Regel: engine kennt keine UI.** Keine Abhängigkeit auf leptos, web-sys, wasm-bindgen o. ä. in `engine`. Alle Zufallswürfe laufen über `engine::GameRng` (ChaCha8 mit Seed), nie über andere Zufallsquellen.
 
@@ -35,5 +37,6 @@ trunk build --release       # fertige Dateien in dist/
 - Pixel-Art in 16 × 16 (Items, Artefakte) und 32 × 32 (Gegner, Charaktere), nur ganzzahlig skaliert (`image-rendering: pixelated`). Bis dahin Platzhalter.
 - Kein Speichern, kein dauerhafter Fortschritt, keine Bestenliste.
 - Schadensreihenfolge: Kartenwert + Waffenwert + Stärke, dann Tag-Multiplikatoren, dann Schwäche und Verwundbar.
-- Tags: Hieb, Gift, Block, Schild, Wurf, Fläche, Ziehen (`engine::Tag`). Jede Karte trägt ein bis zwei Tags.
+- Tags: Hieb, Gift, Block, Schild, Wurf, Fläche, Ziehen, Zauber (`engine::Tag`). Jede Karte trägt ein bis zwei Tags (Statuskarten keine).
+- Charaktere (ersetzen die Arbeitstitel aus KONZEPT.md): Krieger, Schütze, Magier, je mit eigenem Kartenpool, Startdeck und Eigenheit (`data/characters.json`). Dazu ein kleiner neutraler Pool. Dauerhaft mehr Energie oder Handkarten nur über Artefakte.
 - Nichts aus „Nach Version 1“ bauen (Sets, Zusammenfügen, Schmieden, erweiterbarer Rucksack, Charaktere 4 und 5).

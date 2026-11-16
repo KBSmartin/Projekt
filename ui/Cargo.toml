@@ -9,3 +9,4 @@ publish.workspace = true
 engine.workspace = true
 leptos.workspace = true
 console_error_panic_hook.workspace = true
+js-sys = "0.3.107"
