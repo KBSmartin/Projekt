@@ -3,8 +3,8 @@
 
 use crate::{Game, data, text};
 use engine::{
-    Card, CardInstance, CardKind, Combat, EventResult, EventState, MAP_COLS, MAP_ROWS, MapNode,
-    NodeKind, Phase, PickState, Rarity, Reward, RewardSource, Run, Shop, Statuses, needs_target,
+    Card, CardInstance, CardKind, Combat, EventResult, EventState, Phase, PickState, Rarity,
+    Reward, RewardSource, Run, Shop, Statuses, needs_target,
 };
 use leptos::prelude::*;
 
@@ -58,7 +58,7 @@ fn backdrop(id: &str) -> AnyView {
 }
 
 /// Sprite sheet prefix of a character's portrait.
-fn hero_file(character: &str) -> &'static str {
+pub(crate) fn hero_file(character: &str) -> &'static str {
     match character {
         "marksman" => "schuetze",
         "mage" => "magier",
@@ -106,7 +106,9 @@ fn side_panel(game: Game, run: &Run, hp: i32, max_hp: i32) -> AnyView {
     let d = data();
     let ch = d.character(&run.character);
     let name = ch.map_or(String::new(), |c| c.name.clone());
-    let tip = ch.map_or(String::new(), |c| format!("{}: {}", c.trait_name, c.trait_text));
+    let tip = ch.map_or(String::new(), |c| {
+        format!("{}: {}", c.trait_name, c.trait_text)
+    });
     let region = &d.regions[run.region];
     let relics: Vec<_> = run.relics.iter().filter_map(|r| d.relic(*r)).collect();
     let slots = (0..SLOTS)
@@ -317,7 +319,11 @@ fn card_inner(card: &Card, upgraded: bool, damage: i32, block: i32) -> AnyView {
         .collect::<Vec<_>>()
         .join(" · ");
     // Long names get a smaller font and may wrap in the banner.
-    let name_class = if name.chars().count() > 9 { "cn long" } else { "cn" };
+    let name_class = if name.chars().count() > 9 {
+        "cn long"
+    } else {
+        "cn"
+    };
     let type_line = if tags.is_empty() {
         card.kind.name().to_string()
     } else {
@@ -432,120 +438,13 @@ fn region_intro(game: Game, run: &Run) -> AnyView {
     .into_any()
 }
 
-fn node_icon(kind: NodeKind) -> &'static str {
-    match kind {
-        NodeKind::Fight => "⚔️",
-        NodeKind::Elite => "💀",
-        NodeKind::Event => "❓",
-        NodeKind::Shop => "🛒",
-        NodeKind::Rest => "🏕️",
-        NodeKind::Boss => "👹",
-    }
-}
-
 fn map_screen(game: Game, run: &Run) -> AnyView {
-    const W: f64 = 420.0;
-    const H: f64 = 640.0;
-    let d = data();
-    let pos = |n: &MapNode| {
-        (
-            (n.col as f64 + 0.5) / MAP_COLS as f64 * W,
-            H - 40.0 - n.row as f64 * (H - 80.0) / MAP_ROWS as f64,
-        )
-    };
-    let available = run.available_nodes();
-    let lines = run
-        .map
-        .nodes
-        .iter()
-        .flat_map(|n| n.next.iter().map(move |&b| (n, b)))
-        .map(|(n, b)| {
-            let (x1, y1) = pos(n);
-            let (x2, y2) = pos(&run.map.nodes[b]);
-            let on = run.current == Some(n.id) && available.contains(&b);
-            view! {
-                <line
-                    class=if on { "on" } else { "" }
-                    x1=x1.to_string()
-                    y1=y1.to_string()
-                    x2=x2.to_string()
-                    y2=y2.to_string()
-                />
-            }
-        })
-        .collect_view();
-    let boss_icon = d.regions[run.region]
-        .boss
-        .first()
-        .and_then(|id| d.enemies.get(id))
-        .map_or(node_icon(NodeKind::Boss).to_string(), |e| e.icon.clone());
-    let nodes = run
-        .map
-        .nodes
-        .iter()
-        .map(|n| {
-            let (x, y) = pos(n);
-            let boss = n.kind == NodeKind::Boss;
-            let icon = if boss {
-                boss_icon.clone()
-            } else {
-                node_icon(n.kind).to_string()
-            };
-            let av = available.contains(&n.id);
-            let class = format!(
-                "nd{}{}{}{}",
-                if boss { " boss" } else { "" },
-                if av { " av" } else { "" },
-                if run.visited.contains(&n.id) {
-                    " vis"
-                } else {
-                    ""
-                },
-                if run.current == Some(n.id) {
-                    " cur"
-                } else {
-                    ""
-                },
-            );
-            let id = n.id;
-            view! {
-                <g
-                    class=class
-                    transform=format!("translate({x},{y})")
-                    on:click=move |_| {
-                        if av {
-                            game.act(move |r, d| r.choose_node(d, id));
-                        }
-                    }
-                >
-                    <circle r=if boss { "31" } else { "22" } />
-                    <text
-                        y=if boss { "10" } else { "7" }
-                        text-anchor="middle"
-                        font-size=if boss { "30" } else { "20" }
-                    >
-                        {icon}
-                    </text>
-                </g>
-            }
-        })
-        .collect_view();
-    let region = &d.regions[run.region];
     view! {
         <div class="scene map-scene">
             {side_panel(game, run, run.hp, run.max_hp)}
             <section class="field">
-                <div class="box mapwrap">
-                    <div class="reg">
-                        {region.name.clone()}
-                        <small>
-                            {format!("{} · Gebiet {} von {}", region.subtitle, run.region + 1, d.regions.len())}
-                        </small>
-                    </div>
-                    {notice(run)}
-                    <svg class="map" viewBox=format!("0 0 {W} {H}")>{lines}{nodes}</svg>
-                    <p class="legendline">"⚔️ Kampf · 💀 Elite · ❓ Ereignis · 🏕️ Rast · 🛒 Händler"</p>
-                </div>
+                {notice(run)}
+                {crate::worldmap::world(game, run)}
             </section>
         </div>
     }

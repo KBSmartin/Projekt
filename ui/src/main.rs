@@ -7,6 +7,7 @@
 mod debug;
 mod text;
 mod views;
+mod worldmap;
 
 use engine::{ActionError, GameData, Phase, Run};
 use leptos::prelude::*;
@@ -85,6 +86,8 @@ impl MerchantAnim {
 
 /// How long the greeting plays before the merchant goes back to idle.
 const MERCHANT_GREET: Duration = Duration::from_millis(1200);
+/// How long the hero figure walks from one map node to the next (CSS matches).
+const MAP_WALK: Duration = Duration::from_millis(900);
 /// The farewell grin plays and stays a moment before the map comes back.
 const MERCHANT_FAREWELL: Duration = Duration::from_millis(2200);
 
@@ -127,6 +130,8 @@ pub struct Game {
     pub merchant_line: RwSignal<&'static str>,
     /// The merchant is saying goodbye; the shop is closed for buying.
     pub leaving_shop: RwSignal<bool>,
+    /// Map node the hero figure is walking to; the step happens on arrival.
+    pub walking: RwSignal<Option<usize>>,
     finishing: RwSignal<bool>,
 }
 
@@ -140,8 +145,25 @@ impl Game {
             merchant: RwSignal::new((MerchantAnim::Idle, 0)),
             merchant_line: RwSignal::new(""),
             leaving_shop: RwSignal::new(false),
+            walking: RwSignal::new(None),
             finishing: RwSignal::new(false),
         }
+    }
+
+    /// The hero figure walks over the map to the chosen node, then the run
+    /// enters it.
+    pub fn walk_to(self, id: usize) {
+        if self.walking.get_untracked().is_some() {
+            return;
+        }
+        self.walking.set(Some(id));
+        set_timeout(
+            move || {
+                self.walking.set(None);
+                self.act(move |r, d| r.choose_node(d, id));
+            },
+            MAP_WALK,
+        );
     }
 
     fn vitals(self) -> Option<(i32, u32)> {
@@ -227,7 +249,8 @@ impl Game {
     }
 
     fn in_shop(self) -> bool {
-        self.run.with_untracked(|r| matches!(r.as_ref().map(|r| &r.phase), Some(Phase::Shop(_))))
+        self.run
+            .with_untracked(|r| matches!(r.as_ref().map(|r| &r.phase), Some(Phase::Shop(_))))
     }
 
     fn set_merchant(self, anim: MerchantAnim) -> u32 {
