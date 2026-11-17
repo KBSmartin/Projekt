@@ -1,7 +1,6 @@
 # Graphics for the 2.5D world map, written to ui/assets/karte/:
 #   symbol_<kind>.png      8x8 node icons (kampf, elite, ereignis, rast, haendler, boss)
-#   held_<hero>_idle.png   16x16 map figure per hero, 8 frames side by side (128x16)
-#   held_<hero>_lauf.png   walk cycle, 8 frames
+#   (the hero pieces come from figuren.ps1)
 #   boden_<region>.png     top-down ground per region (forest, desert, fortress)
 #   deko_<name>.png        upright decoration sprites (trees, rocks, ...)
 #   nebel.png              seamless fog texture, nebelballen.png fog puff sprite
@@ -57,63 +56,6 @@ $icons = [ordered]@{
   boss     = @('y.y..y.y', 'yyyyyyyy', '.wwwwww.', '.RRwwRR.', '.wwwwww.', '..wwww..', '..w0w0..', '...ww...')
 }
 foreach ($k in $icons.Keys) { Save (GridBmp $icons[$k]) "symbol_$k" }
-
-# ---------- 16x16 hero figures, facing right ----------
-# Body rows 0-12; legs (rows 13-15) come from pose templates where F is the far
-# leg, N the near leg and L the boots, mapped to colours per hero.
-$heroes = [ordered]@{
-  krieger = @{ far = '2'; near = '4'; boot = 'L'; body = @(
-      '................', '................', '......3445......', '.....345554..5..',
-      '.....222222..5..', '.....xeee0e..5..', '.....xeeeeea.5..', '.....zzxzzz..5..',
-      '...jj4zzz44..5..', '...jj4455444YYY.', '...jj34443333e..', '...ij3333332.M..',
-      '....i2MMMM2.....') }
-  schuetze = @{ far = 'M'; near = 'N'; boot = 'L'; body = @(
-      '................', '.......OK.......', '......OOKK......', '.....OOOOKK.....',
-      '....OOvuuuK.....', '....Ouuee0e..B..', '....Oueeeeea.lB.', '....OKueeee..lB.',
-      '...OOKKNNKKeelB.', '...OOKNNNNK..lB.', '...JOKNNNNK..lB.', '...JJKMMMMK..lB.',
-      '....JKMMMMK..B..') }
-  magier = @{ robe = $true; boot = 'L'; body = @(
-      '...TS.......GG..', '....TSS.....GG..', '.....TTS.....B..', '.....UTTS....B..',
-      '....UTTTTS...B..', '....UTVVVVS..B..', '..UTTTTTTTSSSB..', '.....xeee0e..B..',
-      '.....xeeeeea.B..', '....TzzxzzzS.B..', '...TTzzzzzSSeB..', '...TTTzzzTSS.B..',
-      '...TTTUTTTSS.B..') }
-}
-$poses = @{
-  stand = @('......FF.NN.....', '......FF.NN.....', '.....LLL.LLL....')
-  c1    = @('......FF.NN.....', '.....FF...NN....', '....LL.....LL...')
-  pass  = @('.......FNN......', '.......FNN......', '.......LLL......')
-  c2    = @('......NN.FF.....', '.....NN...FF....', '....LL.....LL...')
-}
-$robeFeet = @{ stand = '.....LL.LL...B..'; c1 = '...LL....LL..B..'; pass = '.....LLLL....B..'; c2 = '...LL....LL..B..' }
-function HeroFrame($hero, [string]$pose, [int]$bob) {
-  $rows = New-Object 'string[]' 16
-  for ($y = 0; $y -lt 16; $y++) { $rows[$y] = '................' }
-  if ($hero.robe) {
-    $rows[13] = '...TTUTTTSSS.B..'; $rows[14] = '...TUTTTTSSS.B..'; $rows[15] = $robeFeet[$pose]
-  } else {
-    for ($k = 0; $k -lt 3; $k++) { $rows[13 + $k] = $poses[$pose][$k].Replace('F', $hero.far).Replace('N', $hero.near).Replace('L', $hero.boot) }
-  }
-  # Body over the legs, shifted up by the bob (row 0 is always empty).
-  for ($y = 0; $y -lt 13; $y++) {
-    $ty = $y - $bob; if ($ty -lt 0 -or $ty -gt 15) { continue }
-    $src = $hero.body[$y]; $dst = $rows[$ty].ToCharArray()
-    for ($x = 0; $x -lt 16; $x++) { if ($src[$x] -ne '.') { $dst[$x] = $src[$x] } }
-    $rows[$ty] = -join $dst
-  }
-  GridBmp $rows -Outline
-}
-function Sheet([object[]]$frames) {
-  $s = [Drawing.Bitmap]::new(16 * $frames.Count, 16); $g = [Drawing.Graphics]::FromImage($s)
-  for ($k = 0; $k -lt $frames.Count; $k++) { $g.DrawImageUnscaled($frames[$k], 16 * $k, 0); $frames[$k].Dispose() }
-  $g.Dispose(); $s
-}
-foreach ($name in $heroes.Keys) {
-  $h = $heroes[$name]
-  $idle = foreach ($k in 0..7) { HeroFrame $h 'stand' $(if ($k -ge 2 -and $k -le 5) { 1 } else { 0 }) }
-  Save (Sheet $idle) "held_${name}_idle"
-  $walk = foreach ($p in 'c1', 'pass', 'c2', 'pass', 'c1', 'pass', 'c2', 'pass') { HeroFrame $h $p $(if ($p -eq 'pass') { 1 } else { 0 }) }
-  Save (Sheet $walk) "held_${name}_lauf"
-}
 
 # ---------- decoration sprites (stand upright on the map) ----------
 $deko = [ordered]@{

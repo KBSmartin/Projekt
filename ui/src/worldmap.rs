@@ -124,7 +124,6 @@ pub fn world(game: Game, run: &Run) -> AnyView {
 
     let available = run.available_nodes();
     let here = run.current.map_or(START, pos);
-    let run_started = run.current.is_some();
     // Camera: the hero stands about a fifth into the view, without leaving the plane.
     let cam = (16.0 - here.0 * SPAN / 100.0).clamp(98.0 - SPAN, 2.0);
 
@@ -226,7 +225,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         })
         .collect_view();
 
-    // --- Nodes: a glowing ring on the ground and a sign standing on a post.
+    // --- Nodes: round fields painted on the board, the icon on top.
     let walking = game.walking;
     let nodes = map
         .nodes
@@ -245,12 +244,12 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             } else {
                 ""
             };
-            let boss = if n.kind == NodeKind::Boss { " boss" } else { "" };
             let name = kind_name(n.kind);
             let file = kind_file(n.kind);
-            let sign = view! {
+            view! {
                 <button
-                    class="sign"
+                    class=format!("spot k-{file}{state}")
+                    style=format!("left:{x:.2}%;top:{y:.2}%")
                     title=name
                     aria-label=name
                     disabled=!av
@@ -262,30 +261,18 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 >
                     <img src=format!("assets/karte/symbol_{file}.png") alt="" />
                 </button>
-                <i class="post"></i>
-            }
-            .into_any();
-            view! {
-                <div class=format!("pad{state}{boss}") style=format!("left:{x:.2}%;top:{y:.2}%")></div>
-                {standing(x, y, &format!("mnode{state}{boss}"), sign)}
             }
         })
         .collect_view();
 
-    // --- Hero figure: stands on the current node, walks to the chosen one.
+    // --- Hero piece: stands on the current field, is lifted and set onto the chosen one.
     let hero = crate::views::hero_file(&run.character);
-    let targets: Vec<(usize, (f64, f64))> = available.iter().map(|&id| (id, pos(id))).collect();
-    // The figure stands just in front of a node's sign, not on it.
-    let in_front = |p: (f64, f64)| (p.0 - 1.2, p.1 + 6.0);
+    let targets: Vec<(usize, Pt)> = available.iter().map(|&id| (id, pos(id))).collect();
     let hero_at = move || {
-        let p = walking
+        walking
             .get()
-            .and_then(|id| targets.iter().find(|t| t.0 == id).map(|t| t.1));
-        match p {
-            Some(p) => in_front(p),
-            None if run_started => in_front(here),
-            None => here,
-        }
+            .and_then(|id| targets.iter().find(|t| t.0 == id).map(|t| t.1))
+            .unwrap_or(here)
     };
     let hero_at2 = hero_at.clone();
     let hero_view = view! {
@@ -293,14 +280,9 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             class="bb hero"
             class:walk=move || walking.get().is_some()
             style:left=move || format!("{:.2}%", hero_at().0)
-            style:top=move || format!("{:.2}%", hero_at2().1)
+            style:top=move || format!("{:.2}%", hero_at2().1 + 1.5)
         >
-            <div
-                class="hfig"
-                style=format!(
-                    "--idle:url(assets/karte/held_{hero}_idle.png);--walk:url(assets/karte/held_{hero}_lauf.png)",
-                )
-            ></div>
+            <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
         </div>
     };
 
