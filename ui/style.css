@@ -366,3 +366,15 @@ h3 { font-size: 12px; font-weight: 400; }
 .fx-title .l2 { --d: 110s; width: 200%; left: -100%; background-size: 50% 100%; animation: fx-drift var(--d) steps(320) infinite; }
 .fx-title .l3 { --d: .9s; animation: fx-flicker var(--d) steps(1) infinite; }
 .fx-title .l4 { --d: 3.2s; animation: fx-pulse var(--d) steps(4) infinite alternate; }
+
+/* Merchant in the shop: 32x32 frames shown 5x, speech bubble next to him. */
+.merchant { display: flex; align-items: center; gap: 24px; }
+.mk { width: 160px; height: 160px; flex: none; image-rendering: pixelated; background-size: 1280px 160px; background-repeat: no-repeat; filter: drop-shadow(0 8px 10px #000a); }
+.ma-idle { animation: mframes 1600ms steps(8) infinite; }
+.ma-gruss { animation: mframes 1200ms steps(8) 1 forwards; }
+.ma-abschied { animation: mframes 1400ms steps(8) 1 forwards; }
+@keyframes mframes { from { background-position: 0 0; } to { background-position: -1280px 0; } }
+.mtalk { display: grid; gap: 12px; justify-items: start; max-width: 360px; }
+.bubble { position: relative; margin: 0; padding: 12px 14px; background: #0c0a10; border: 2px solid #5a1a1e; color: #e8d8c8; line-height: 1.8; box-shadow: 4px 4px 0 #000; }
+.bubble::before { content: ""; position: absolute; left: -12px; top: 14px; border-style: solid; border-width: 6px 12px 6px 0; border-color: transparent #5a1a1e transparent transparent; }
+.shop.closing .grid, .shop.closing .relicgain { opacity: .45; pointer-events: none; transition: opacity .4s; }

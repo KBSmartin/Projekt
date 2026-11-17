@@ -784,9 +784,8 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
     view! {
         {top_bar(game, run, true)}
         {notice(run)}
-        <section class="panel wide">
-            <div class="big">"🛒"</div>
-            <h2>"Händler"</h2>
+        <section class="panel wide shop" class:closing=move || game.leaving_shop.get()>
+            {merchant(game)}
             <div class="grid">{items}</div>
             {relic}
             <div class="row">
@@ -797,11 +796,44 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
                 >
                     {format!("Karte entfernen · 🪙 {}", shop.remove_cost)}
                 </button>
-                <button class="btn" on:click=move |_| game.act(|r, _| r.leave_shop())>
+                <button
+                    class="btn"
+                    disabled=move || game.leaving_shop.get()
+                    on:click=move |_| game.leave_shop()
+                >
                     "Weiterziehen"
                 </button>
             </div>
         </section>
+    }
+    .into_any()
+}
+
+/// The hooded merchant with his speech bubble; the sprite sheet and CSS class
+/// follow [`crate::MerchantAnim`], a new trigger restarts the animation.
+fn merchant(game: Game) -> AnyView {
+    view! {
+        <div class="merchant">
+            {move || {
+                let (anim, _) = game.merchant.get();
+                let file = anim.file();
+                view! {
+                    <div
+                        class=format!("mk ma-{file}")
+                        style=format!("background-image:url(assets/haendler/{file}.png)")
+                        role="img"
+                        aria-label="Der Händler"
+                    ></div>
+                }
+            }}
+            <div class="mtalk">
+                <h2>"Händler"</h2>
+                {move || {
+                    let line = game.merchant_line.get();
+                    (!line.is_empty()).then(|| view! { <p class="bubble">{line}</p> })
+                }}
+            </div>
+        </div>
     }
     .into_any()
 }

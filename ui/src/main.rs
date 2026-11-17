@@ -64,6 +64,46 @@ impl PortraitAnim {
     }
 }
 
+/// Animation the merchant plays in the shop (sprite sheets in `ui/assets/haendler`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MerchantAnim {
+    Idle,
+    Greet,
+    Farewell,
+}
+
+impl MerchantAnim {
+    /// Sprite sheet file name and part of the CSS class.
+    pub fn file(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Greet => "gruss",
+            Self::Farewell => "abschied",
+        }
+    }
+}
+
+/// How long the greeting plays before the merchant goes back to idle.
+const MERCHANT_GREET: Duration = Duration::from_millis(1200);
+/// The farewell grin plays and stays a moment before the map comes back.
+const MERCHANT_FAREWELL: Duration = Duration::from_millis(2200);
+
+const GREETINGS: [&str; 3] = [
+    "Willkommen, Abenteurer … sieh dich ruhig um.",
+    "Ah … ein Kunde. Tritt näher.",
+    "Gold gegen Macht. Ein fairer Handel … meistens.",
+];
+const FAREWELLS: [&str; 3] = [
+    "Wir sehen uns wieder … ganz bestimmt.",
+    "Komm bald wieder … solange du noch kannst.",
+    "Möge dein Gold … zu mir zurückfinden.",
+];
+
+/// Random line for flavour text only (not game logic, so not the run's RNG).
+fn any_line(lines: &[&'static str]) -> &'static str {
+    lines[(js_sys::Math::random() * lines.len() as f64) as usize % lines.len()]
+}
+
 /// Player HP and poison, inside a fight from the fight itself.
 fn vitals(run: &Run) -> (i32, u32) {
     match &run.phase {
@@ -82,6 +122,11 @@ pub struct Game {
     pub deck_open: RwSignal<bool>,
     /// Current portrait animation and a counter, so a new trigger restarts it.
     pub portrait: RwSignal<(PortraitAnim, u32)>,
+    /// Merchant animation with a restart counter, and what he is saying.
+    pub merchant: RwSignal<(MerchantAnim, u32)>,
+    pub merchant_line: RwSignal<&'static str>,
+    /// The merchant is saying goodbye; the shop is closed for buying.
+    pub leaving_shop: RwSignal<bool>,
     finishing: RwSignal<bool>,
 }
 
@@ -92,6 +137,9 @@ impl Game {
             selected: RwSignal::new(None),
             deck_open: RwSignal::new(false),
             portrait: RwSignal::new((PortraitAnim::Idle, 0)),
+            merchant: RwSignal::new((MerchantAnim::Idle, 0)),
+            merchant_line: RwSignal::new(""),
+            leaving_shop: RwSignal::new(false),
             finishing: RwSignal::new(false),
         }
     }
@@ -163,6 +211,7 @@ impl Game {
     pub fn act(self, f: impl FnOnce(&mut Run, &GameData) -> Result<(), ActionError>) {
         self.selected.set(None);
         let before = self.vitals();
+        let was_shop = self.in_shop();
         self.run.update(|run| {
             if let Some(run) = run
                 && let Err(e) = f(run, data())
@@ -171,7 +220,55 @@ impl Game {
             }
         });
         self.react(before);
+        if !was_shop && self.in_shop() {
+            self.greet();
+        }
         self.schedule_combat_end();
+    }
+
+    fn in_shop(self) -> bool {
+        self.run.with_untracked(|r| matches!(r.as_ref().map(|r| &r.phase), Some(Phase::Shop(_))))
+    }
+
+    fn set_merchant(self, anim: MerchantAnim) -> u32 {
+        let key = self.merchant.get_untracked().1.wrapping_add(1);
+        self.merchant.set((anim, key));
+        key
+    }
+
+    /// The merchant welcomes the adventurer, then waits.
+    fn greet(self) {
+        self.leaving_shop.set(false);
+        self.merchant_line.set(any_line(&GREETINGS));
+        let key = self.set_merchant(MerchantAnim::Greet);
+        set_timeout(
+            move || {
+                if self.merchant.get_untracked().1 == key {
+                    self.set_merchant(MerchantAnim::Idle);
+                }
+            },
+            MERCHANT_GREET,
+        );
+    }
+
+    /// Leaving the shop: the merchant grins and says goodbye, then the run
+    /// moves on to the map.
+    pub fn leave_shop(self) {
+        if self.leaving_shop.get_untracked() {
+            return;
+        }
+        self.leaving_shop.set(true);
+        self.merchant_line.set(any_line(&FAREWELLS));
+        self.set_merchant(MerchantAnim::Farewell);
+        set_timeout(
+            move || {
+                self.leaving_shop.set(false);
+                if self.in_shop() {
+                    self.act(|r, _| r.leave_shop());
+                }
+            },
+            MERCHANT_FAREWELL,
+        );
     }
 
     /// Not generic on purpose: calling the generic `act` from here would make
