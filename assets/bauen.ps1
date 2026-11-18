@@ -8,6 +8,7 @@ $here = $PSScriptRoot
 & (Join-Path $here 'haendler\haendler.ps1')
 & (Join-Path $here 'karte\karte.ps1')
 & (Join-Path $here 'karte\figuren.ps1')
+& (Join-Path $here 'karte\hand.ps1')
 $bg = Join-Path $here '..\ui\assets\hintergrund'
 New-Item -ItemType Directory -Force $bg | Out-Null
 foreach ($n in 'titel', 'wald', 'wueste', 'festung') {

@@ -382,7 +382,8 @@ h3 { font-size: 12px; font-weight: 400; }
 
 
 
-.fogwar { position: absolute; top: -2%; bottom: -2%; right: -2%; transform: translateZ(2px); background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
+.fogwar { position: absolute; top: -7%; bottom: -16px; right: -16px; transform: translateZ(2px);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); -webkit-mask-composite: source-in; mask-composite: intersect; background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
 .fogwar::after { content: ""; position: absolute; inset: 0; background: inherit; background-size: 256px 256px; opacity: .45; animation: fog-b 32s steps(64) infinite; }
 /* Each layer moves exactly one tile width, so the loop has no visible jump. */
 @keyframes fog-a { from { background-position: 0 0; } to { background-position: 384px 0; } }
@@ -466,11 +467,15 @@ h3 { font-size: 12px; font-weight: 400; }
 .spot.k-start.vis { filter: saturate(.2) brightness(.55); }
 
 /* A hand lowers the piece onto the chosen start point and pulls back up. */
-.hero .hand { display: none; position: absolute; left: -32px; top: -77px; width: 160px; height: 160px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 #0006); }
+/* Hand: 28x28 pixel art at 4x; the pinch (13,24) sits on the piece head (48,61). */
+.hero .hand { display: none; position: absolute; left: -5px; top: -35px; width: 112px; height: 112px; filter: drop-shadow(0 6px 0 #0006); }
+.hero .hand img { position: relative; width: 112px; height: 112px; image-rendering: pixelated; }
+/* The sleeve goes on as a long arm up and to the right, out of view. */
+.hero .hand .arm { position: absolute; left: 82px; top: -896px; width: 40px; height: 900px; transform-origin: 50% 100%; transform: rotate(45deg); background: linear-gradient(90deg, #3a3246 0 30%, #241e2c 30%); border: 4px solid #140c0c; border-bottom: 0; }
 .hero.placing .hand { display: block; animation: hand-place 3s ease-in-out both; }
 .hero.placing .piece { animation: piece-place 3s ease-in-out both; }
 @keyframes piece-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 100% { transform: translateY(0); } }
-@keyframes hand-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 68% { transform: translateY(0); } 100% { transform: translateY(-560px); opacity: 0; } }
+@keyframes hand-place { 0% { transform: translateY(-520px); opacity: 1; } 48% { transform: translateY(-8px); opacity: 1; } 56%, 72% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-560px); opacity: 0; } }
 
 /* Panning the map: drag or wheel; smooth except while dragging. */
 .world { cursor: grab; touch-action: none; user-select: none; }
@@ -480,3 +485,14 @@ h3 { font-size: 12px; font-weight: 400; }
 /* Wheel zoom: the whole board scales on screen, 3D stays intact. */
 .zoom { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 70%; transition: transform .2s ease-out; }
 .world.dragging .zoom { transition: none; }
+
+/* Fog running down the front and the right edge of the board. */
+.fogfall { position: absolute; background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; pointer-events: none; }
+.fogfall.front { top: calc(100% + 16px); right: -16px; height: 170px; transform-origin: 50% 0; transform: translateZ(6px) rotateX(calc(-1 * var(--tilt) - 30deg));
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #0009 45%, transparent 100%), linear-gradient(90deg, transparent 0, #000 120px); mask-image: linear-gradient(180deg, #000 0, #0009 45%, transparent 100%), linear-gradient(90deg, transparent 0, #000 120px); -webkit-mask-composite: source-in; mask-composite: intersect;
+  animation: fog-down 14s steps(96) infinite; }
+.fogfall.side { right: -16px; top: -16px; bottom: -16px; width: 150px; transform-origin: 100% 50%; transform: rotateY(-90deg) translateZ(-3px);
+  -webkit-mask-image: linear-gradient(270deg, #000 0, #0009 45%, transparent 100%); mask-image: linear-gradient(270deg, #000 0, #0009 45%, transparent 100%);
+  animation: fog-side 14s steps(96) infinite; }
+@keyframes fog-down { from { background-position: 0 0; } to { background-position: 0 384px; } }
+@keyframes fog-side { from { background-position: 0 0; } to { background-position: -384px 0; } }

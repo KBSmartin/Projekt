@@ -527,24 +527,18 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 style:top=move || format!("{:.2}%", hero_at2().1 + 1.5)
             >
                 <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
-                <img class="hand" src="assets/karte/hand.png" alt="" />
+                <div class="hand">
+                    <i class="arm"></i>
+                    <img src="assets/karte/hand.png" alt="" />
+                </div>
             </div>
         }
     });
 
-    // --- Fog: a flat layer with a ragged edge and puffs standing along it.
+    // --- Fog: a flat layer with a soft edge, puffs standing along it, and
+    // falls running down the edges of the board.
     let fog = fog_x.map(|fx| {
         let left = fx - 2.0;
-        let width = 102.0 - left;
-        let mut pts = Vec::new();
-        for i in 0..=24 {
-            let t = i as f64 / 24.0;
-            let wob = 2.0 + 1.6 * (t * 23.0 + salt as f64 % 7.0).sin() + 1.0 * (t * 61.0).sin();
-            pts.push(format!("{:.2}% {:.2}%", wob / width * 100.0, t * 100.0));
-        }
-        pts.push("100% 100%".into());
-        pts.push("100% 0%".into());
-        let clip = format!("polygon({})", pts.join(","));
         // A wall of puffs along the edge, then loose banks over the whole fog.
         let mut spots: Vec<(f64, f64, f64)> = (0..10)
             .map(|i| {
@@ -591,7 +585,10 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             })
             .collect_view();
         view! {
-            <div class="fogwar" style=format!("left:{left:.2}%;clip-path:{clip}")></div>
+            <div class="fogwar" style=format!("left:{left:.2}%")></div>
+            // The fog spills over the rim and runs down the front and right side.
+            <div class="fogfall front" style=format!("left:{left:.2}%")></div>
+            <div class="fogfall side"></div>
             {puffs}
         }
     });
