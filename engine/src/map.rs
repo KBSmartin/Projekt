@@ -38,11 +38,13 @@ impl Map {
         let mut nodes: Vec<MapNode> = Vec::new();
         let mut rows: Vec<Vec<usize>> = Vec::new();
         for r in 0..MAP_ROWS {
+            // Fix: the prototype placed 3-4 nodes per row (2-3 in the last);
+            // the board map reads better with 2-3 (2 in the last row).
             let k = if r == MAP_ROWS - 1 {
-                rng.range(2, 3)
+                2
             } else {
-                rng.range(3, 4)
-            } as usize;
+                rng.range(2, 3) as usize
+            };
             let mut cols: Vec<usize> = (0..MAP_COLS).collect();
             rng.shuffle(&mut cols);
             cols.truncate(k);
@@ -220,6 +222,17 @@ mod tests {
                 }
             }
             assert_eq!(map.nodes[map.boss()].kind, NodeKind::Boss);
+        }
+    }
+
+    #[test]
+    fn rows_stay_small() {
+        for map in maps() {
+            for r in 0..MAP_ROWS {
+                let n = map.rows[r].len();
+                assert!((2..=3).contains(&n), "row {r} has {n} nodes");
+            }
+            assert_eq!(map.rows[MAP_ROWS - 1].len(), 2);
         }
     }
 

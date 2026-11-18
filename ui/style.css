@@ -382,9 +382,11 @@ h3 { font-size: 12px; font-weight: 400; }
 
 
 
-.fogwar { position: absolute; top: -2%; bottom: -2%; right: -2%; transform: translateZ(2px); background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-drift 40s linear infinite; }
-.fogwar::after { content: ""; position: absolute; inset: 0; background: inherit; background-size: 256px 256px; opacity: .45; animation: fog-drift 26s linear infinite reverse; }
-@keyframes fog-drift { to { background-position: 384px 192px; } }
+.fogwar { position: absolute; top: -2%; bottom: -2%; right: -2%; transform: translateZ(2px); background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
+.fogwar::after { content: ""; position: absolute; inset: 0; background: inherit; background-size: 256px 256px; opacity: .45; animation: fog-b 32s steps(64) infinite; }
+/* Each layer moves exactly one tile width, so the loop has no visible jump. */
+@keyframes fog-a { from { background-position: 0 0; } to { background-position: 384px 0; } }
+@keyframes fog-b { from { background-position: 0 0; } to { background-position: -256px 0; } }
 .puff img { animation: puff-bob 3s steps(3) infinite alternate; opacity: .95; }
 @keyframes puff-bob { to { transform: translateY(-6px) translateX(4px); } }
 

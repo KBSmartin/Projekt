@@ -95,6 +95,19 @@ const EISZAPFEN: Sprite = ("eiszapfen", 10, 8);
 const BANNER: Sprite = ("banner", 8, 12);
 const MAUER: Sprite = ("mauer", 14, 8);
 
+/// Board edges per region: tall sprites along the far edge (a wood, a ridge of
+/// rocks), low ones along the near edge so they never hide a field.
+fn edges(region: &str) -> (&'static [Sprite], &'static [Sprite]) {
+    match region {
+        "desert" => (&[FELS, KAKTUS, FELS, TOTBAUM], &[STEIN, KNOCHEN]),
+        "fortress" => (
+            &[SCHNEETANNE, SCHNEETANNE, SCHNEEFELS],
+            &[SCHNEEFELS, STEIN, EIS],
+        ),
+        _ => (&[TANNE, TANNE, BAUM, TANNE, BIRKE], &[BUSCH, STEIN, BUSCH]),
+    }
+}
+
 fn themes(region: &str) -> &'static [Theme] {
     match region {
         "desert" => &[
@@ -266,7 +279,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         .collect();
     let free = |x: f64, y: f64, room: f64| {
         (2.0..=98.0).contains(&x)
-            && (4.0..=96.0).contains(&y)
+            && (1.0..=99.0).contains(&y)
             && !fog_x.is_some_and(|f| x > f - 2.0)
             && map
                 .nodes
@@ -284,8 +297,8 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     let mut centres: Vec<Pt> = Vec::new();
     let mut h = mix(salt ^ 0xDEC0);
     let first = (h % set.len() as u64) as usize;
-    for _ in 0..90 {
-        if centres.len() >= 9 {
+    for _ in 0..160 {
+        if centres.len() >= 13 {
             break;
         }
         h = mix(h);
@@ -296,7 +309,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         if !free(cx, cy, 2.5)
             || centres
                 .iter()
-                .any(|c| ((c.0 - cx) * XS).hypot(c.1 - cy) < 22.0)
+                .any(|c| ((c.0 - cx) * XS).hypot(c.1 - cy) < 19.0)
         {
             continue;
         }
@@ -306,7 +319,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         if let Some(flat) = theme.flat {
             flats.push((cx, cy, flat));
         }
-        let count = 2 + (mix(h ^ 3) % 4) as usize;
+        let count = 3 + (mix(h ^ 3) % 4) as usize;
         for k in 0..count {
             let hk = mix(h ^ (k as u64 + 11));
             let angle = unit(hk) * std::f64::consts::PI;
@@ -330,6 +343,32 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             uprights.push((x, y, pool[(mix(hk ^ 5) % pool.len() as u64) as usize]));
         }
     }
+    // A wood (or ridge) along the far edge of the board, low growth along the
+    // near edge; both stop at the fog.
+    let (far, near) = edges(&rid);
+    let mut x = 1.5;
+    while x < 98.5 {
+        h = mix(h);
+        for (band, pool, y0) in [(0u64, far, 3.0), (1, near, 96.5)] {
+            let hb = mix(h ^ band);
+            let (xx, yy) = (x + unit(hb) * 0.6, y0 + unit(mix(hb)) * 1.6);
+            if (band == 1 && hb.is_multiple_of(3)) || !free(xx, yy, -3.0) {
+                continue;
+            }
+            uprights.push((xx, yy, pool[(mix(hb ^ 9) % pool.len() as u64) as usize]));
+            // A second row on the far edge makes it read as a wood.
+            if band == 0 && hb.is_multiple_of(2) && free(xx + 0.7, yy + 3.5, -3.0) {
+                uprights.push((
+                    xx + 0.7,
+                    yy + 3.5,
+                    pool[(mix(hb ^ 13) % pool.len() as u64) as usize],
+                ));
+            }
+        }
+        x += 1.9;
+    }
+    // Draw back to front, so nearer sprites cover farther ones.
+    uprights.sort_by(|a, b| a.1.total_cmp(&b.1));
     let flats = flats
         .into_iter()
         .map(|(x, y, (name, w, ht))| {

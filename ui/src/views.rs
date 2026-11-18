@@ -232,7 +232,7 @@ fn choose_screen(game: Game) -> AnyView {
         {backdrop("title")}
         <main class="app">
             <div class="title">
-                <h2 class="choose-h">"Wähle deinen Charakter"</h2>
+                <h2 class="choose-h">"Wähle dein Schicksal"</h2>
                 <div class="chars">{characters}</div>
                 <button class="btn ghost back" on:click=move |_| game.show_title(TitlePage::Start)>
                     "Zurück"
