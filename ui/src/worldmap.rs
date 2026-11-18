@@ -13,6 +13,9 @@ const SIGHT: i32 = 2;
 const SPAN: f64 = 320.0;
 /// Where the hero stands, in percent of the window width.
 const HERO_AT: f64 = 32.0;
+/// Right edge of the side panel in pixels; the panel turns see-through when
+/// the board reaches under it.
+const HUD_EDGE: f64 = 192.0;
 /// Where the hero stands before the first step.
 const START: (f64, f64) = (3.5, 58.0);
 
@@ -538,57 +541,48 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         }
     });
 
-    // --- Fog: a flat layer with a soft edge, puffs standing along it, and
-    // falls running down the edges of the board.
+    // --- Fog: a flat layer with a soft edge and puffs standing along it.
     let fog = fog_x.map(|fx| {
         let left = fx - 2.0;
-        // A sea of clouds: billows packed in rows from the back to the front,
-        // big ones at the leading edge and near the viewer, all slowly
-        // rolling. Along the front edge clouds keep pouring over the rim.
-        const SIZES: [(&str, f64, f64); 3] = [("gross", 40.0, 28.0), ("mittel", 28.0, 20.0), ("klein", 18.0, 13.0)];
-        let mut clouds: Vec<(f64, f64, usize, u64, &'static str)> = Vec::new();
+        // A wall of puffs along the soft edge, then loose banks over the
+        // fog, all kept on the board.
+        let mut spots: Vec<(f64, f64, f64)> = (0..10)
+            .map(|i| {
+                (
+                    fx + 0.8 + unit(mix(salt ^ i)) * 1.0,
+                    6.0 + i as f64 * 9.8,
+                    1.2,
+                )
+            })
+            .collect();
         let mut h = mix(salt ^ 0xF06);
-        let mut y = 2.0;
-        while y < 101.0 {
-            let mut x = fx + 0.8 + (unit(mix(h ^ 5)) + 1.0) * 1.2;
-            while x < 101.0 {
+        let mut x = fx + 6.0;
+        while x < 96.0 {
+            let mut y = 8.0 + (unit(h) + 1.0) * 4.0;
+            while y < 94.0 {
                 h = mix(h);
-                let edge = x < fx + 4.0;
-                let size = if edge || y > 80.0 { (h % 2) as usize } else { (h % 3) as usize };
-                clouds.push((x + unit(h) * 1.0, y + unit(mix(h)) * 2.0, size, h, "roll"));
-                x += if size == 0 { 4.6 } else if size == 1 { 3.4 } else { 2.6 };
+                spots.push((x + unit(h) * 2.0, y, 0.8 + (unit(mix(h)) + 1.0) * 0.3));
+                y += 18.0 + (unit(mix(h ^ 3)) + 1.0) * 5.0;
             }
-            y += 7.5;
+            x += 8.0;
         }
-        // Clouds tumbling over the front edge, staggered.
-        let mut x = fx + 1.0;
-        let mut k = 0u64;
-        while x < 100.0 {
-            h = mix(h ^ k);
-            clouds.push((x + unit(h) * 1.2, 100.5, (h % 2) as usize, h, "spill"));
-            x += 3.2;
-            k += 1;
-        }
-        let puffs = clouds
+        let puffs = spots
             .into_iter()
-            .map(|(x, y, size, h, kind)| {
-                let (name, w, ht) = SIZES[size];
-                let variant = 1 + (h >> 7) % 2;
-                let dur = if kind == "spill" { 7.0 + (h % 40) as f64 / 10.0 } else { 6.0 + (h % 60) as f64 / 10.0 };
-                let delay = (h >> 13) % 100;
+            .enumerate()
+            .map(|(i, (x, y, s))| {
                 standing(
                     x,
                     y,
-                    &format!("cloud {kind}"),
+                    "puff",
                     view! {
                         <img
-                            src=format!("assets/karte/wolke_{name}{variant}.png")
+                            src="assets/karte/nebelballen.png"
                             alt=""
                             style=format!(
-                                "width:{:.0}px;height:{:.0}px;animation-duration:{dur:.1}s;animation-delay:-{:.1}s",
-                                w * 5.0,
-                                ht * 5.0,
-                                dur * delay as f64 / 100.0,
+                                "width:{:.0}px;height:{:.0}px;animation-delay:-{}s",
+                                104.0 * s,
+                                40.0 * s,
+                                i * 7 % 5,
                             )
                         />
                     }
@@ -598,9 +592,6 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             .collect_view();
         view! {
             <div class="fogwar" style=format!("left:{left:.2}%")></div>
-            // The fog spills over the rim and runs down the front and right side.
-            <div class="fogfall front" style=format!("left:{left:.2}%")></div>
-            <div class="fogfall side"></div>
             {puffs}
         }
     });
@@ -631,6 +622,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     let zoom = game.map_zoom;
     let dragged = game.map_dragged;
     let drag = StoredValue::new(None::<(f64, f64, f64, f64)>);
+    let dragging = RwSignal::new(false);
     let view_w = || {
         window()
             .inner_width()
@@ -662,13 +654,17 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 dragged.set(true);
             }
             if dragged.get_untracked() {
+                dragging.set(true);
                 let z = zoom.get_untracked();
                 pan.set(clamp_pan(p0 + dx / view_w() * 100.0 / z));
                 pan_y.set(clamp_y(q0 + dy, z));
             }
         }
     };
-    let on_up = move |_| drag.set_value(None);
+    let on_up = move |_| {
+        drag.set_value(None);
+        dragging.set(false);
+    };
     let on_wheel = move |e: leptos::ev::WheelEvent| {
         e.prevent_default();
         let d = e.delta_y();
@@ -677,10 +673,29 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         pan_y.update(|y| *y = clamp_y(*y, z));
     };
 
+    // Whether the board reaches under the side panel: measured on screen
+    // (perspective makes the near edge wider), a moment after each move.
+    let under_hud = RwSignal::new(false);
+    let plane_ref = NodeRef::<leptos::html::Div>::new();
+    Effect::new(move |_| {
+        pan.track();
+        zoom.track();
+        pan_y.track();
+        set_timeout(
+            move || {
+                if let Some(el) = plane_ref.get_untracked() {
+                    under_hud.set(el.get_bounding_client_rect().left() < HUD_EDGE);
+                }
+            },
+            std::time::Duration::from_millis(320),
+        );
+    });
+
     view! {
         <div
             class=format!("world w-{rid}")
-            class:dragging=move || dragged.get() && drag.get_value().is_some()
+            class:dragging=move || dragging.get()
+            class:under-hud=move || under_hud.get()
             on:pointerdown=on_down
             on:pointermove=on_move
             on:pointerup=on_up
@@ -699,6 +714,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             >
             <div
                 class="plane"
+                node_ref=plane_ref
                 style=format!("background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%")
                 style:left=move || format!("{:.2}%", cam + pan.get())
             >

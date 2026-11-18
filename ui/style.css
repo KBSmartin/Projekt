@@ -373,7 +373,7 @@ h3 { font-size: 12px; font-weight: 400; }
 .world .reg { position: absolute; z-index: 5; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; background: #0c0a10cc; border: 2px solid var(--line); padding: 8px 16px; box-shadow: 4px 4px 0 #000; white-space: nowrap; }
 .world .reg small { display: block; margin-top: 6px; color: var(--mute); }
 .plane { position: absolute; bottom: 7%; height: 126%; transform-origin: 50% 100%; transform: rotateX(var(--tilt)); transform-style: preserve-3d;
-  background-size: 768px 640px; background-repeat: repeat; image-rendering: pixelated; border: 16px solid #6a4220; border-image: repeating-linear-gradient(90deg, #7a4c24 0 24px, #6a4020 24px 40px, #845428 40px 56px) 16; box-shadow: inset 0 0 40px 10px #0007, 0 0 0 4px #1c1008; }
+  background-size: 768px 640px; background-repeat: repeat; image-rendering: pixelated; border: 16px solid #6a4220; border-radius: 48px; box-shadow: inset 0 0 0 3px #3a2210, inset 0 0 40px 10px #0007, 0 0 0 4px #1c1008, inset 0 0 0 0 transparent; outline: 3px solid #8a5a2c; outline-offset: -10px; }
 .trails { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 @keyframes trail-run { to { stroke-dashoffset: -16; } }
 
@@ -382,10 +382,9 @@ h3 { font-size: 12px; font-weight: 400; }
 
 
 
-.fogwar { position: absolute; top: -7%; bottom: -16px; right: -16px; transform: translateZ(2px);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); -webkit-mask-composite: source-in; mask-composite: intersect; background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
+.fogwar { position: absolute; top: 0; bottom: 0; right: 0; border-radius: 0 34px 34px 0; transform: translateZ(2px);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #0005 90px, #000d 200px, #000 260px); mask-image: linear-gradient(90deg, transparent 0, #0005 90px, #000d 200px, #000 260px); background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
 .fogwar::after { content: ""; position: absolute; inset: 0; background: inherit; background-size: 256px 256px; opacity: .45; animation: fog-b 32s steps(64) infinite; }
-.fogwar { filter: brightness(.62) saturate(1.2); }
 /* Each layer moves exactly one tile width, so the loop has no visible jump. */
 @keyframes fog-a { from { background-position: 0 0; } to { background-position: 384px 0; } }
 @keyframes fog-b { from { background-position: 0 0; } to { background-position: -256px 0; } }
@@ -466,9 +465,9 @@ h3 { font-size: 12px; font-weight: 400; }
 .spot.k-start.vis { filter: saturate(.2) brightness(.55); }
 
 /* A hand lowers the piece onto the chosen start point and pulls back up. */
-/* Hand: 28x28 pixel art at 4x, reaching in from the left; the pinch (14.7,24) sits on the piece head (48,61). */
-.hero .hand { display: none; position: absolute; left: -11px; top: -35px; width: 112px; height: 112px; filter: drop-shadow(0 6px 0 #0006); }
-.hero .hand img { position: relative; width: 112px; height: 112px; image-rendering: pixelated; }
+/* Hand: 24x24 pixel art at 4x, reaching in from the left; the pinch (14,22.5) sits on the piece head (48,61). */
+.hero .hand { display: none; position: absolute; left: -8px; top: -29px; width: 96px; height: 96px; filter: drop-shadow(0 6px 0 #0006); }
+.hero .hand img { position: relative; width: 96px; height: 96px; image-rendering: pixelated; }
 .hero.placing .hand { display: block; animation: hand-place 3s ease-in-out both; }
 .hero.placing .piece { animation: piece-place 3s ease-in-out both; }
 @keyframes piece-place { 0% { transform: translate(-460px, -420px); } 48% { transform: translate(-6px, -8px); } 56%, 100% { transform: translate(0, 0); } }
@@ -483,28 +482,16 @@ h3 { font-size: 12px; font-weight: 400; }
 .zoom { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 70%; transition: transform .2s ease-out; }
 .world.dragging .zoom { transition: none; }
 
-/* Fog running down the front and the right edge of the board. */
-.fogfall { position: absolute; background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; pointer-events: none; }
-.fogfall.front { top: calc(100% + 16px); right: -16px; height: 170px; transform-origin: 50% 0; transform: translateZ(6px) rotateX(calc(-1 * var(--tilt) - 30deg));
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #0009 45%, transparent 100%), linear-gradient(90deg, transparent 0, #000 120px); mask-image: linear-gradient(180deg, #000 0, #0009 45%, transparent 100%), linear-gradient(90deg, transparent 0, #000 120px); -webkit-mask-composite: source-in; mask-composite: intersect;
-  animation: fog-down 14s steps(96) infinite; }
-.fogfall.side { right: -16px; top: -16px; bottom: -16px; width: 150px; transform-origin: 100% 50%; transform: rotateY(-90deg) translateZ(-3px);
-  -webkit-mask-image: linear-gradient(270deg, #000 0, #0009 45%, transparent 100%); mask-image: linear-gradient(270deg, #000 0, #0009 45%, transparent 100%);
-  animation: fog-side 14s steps(96) infinite; }
-@keyframes fog-down { from { background-position: 0 0; } to { background-position: 0 384px; } }
-@keyframes fog-side { from { background-position: 0 0; } to { background-position: -384px 0; } }
 
-/* Sea of clouds over the fogged part of the board: billows slowly rolling,
-   and clouds pouring over the front edge like a waterfall. */
-.cloud img { display: block; image-rendering: pixelated; animation-name: cloud-roll; animation-timing-function: steps(10); animation-iteration-count: infinite; animation-direction: alternate; }
-.cloud.spill img { animation-name: cloud-spill; animation-timing-function: linear; animation-direction: normal; }
-@keyframes cloud-roll { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(6px, -4px) scale(1.04); } 100% { transform: translate(-4px, 2px) scale(.98); } }
-@keyframes cloud-spill { 0% { transform: translateY(-24px) scale(.9); opacity: 0; } 15% { opacity: 1; } 55% { transform: translateY(70px) scale(1.05); opacity: .95; } 100% { transform: translateY(200px) scale(1.25); opacity: 0; } }
-
-/* The board fills the whole window behind the side panel; the panel floats
-   over it, half see-through, and fades further while the board is dragged. */
+/* The board fills the whole window behind the side panel, which floats over it. */
 .map-scene .world { position: fixed; inset: 0; width: auto; height: auto; margin: 0; z-index: 0; }
 .map-scene .side { position: relative; z-index: 3; transition: opacity .3s; }
-.map-scene .side .box { background: #0c0a10b8; backdrop-filter: blur(2px); }
-.map-scene:has(.world.dragging) .side { opacity: .25; }
+/* Only when the board lies under the panel does it turn slightly see-through. */
+.map-scene:has(.world.under-hud) .side { opacity: .82; }
 .map-scene .notice { position: relative; z-index: 4; }
+.puff img { animation: puff-bob 3s steps(3) infinite alternate; opacity: .95; }
+@keyframes puff-bob { to { transform: translateY(-6px) translateX(4px); } }
+/* Rounded board: the front and side faces stop short of the rounded corners. */
+.plane::after { left: 32px; right: 32px; }
+.bside { top: 32px; bottom: 32px; }
+.plane::before { border-radius: 64px; }

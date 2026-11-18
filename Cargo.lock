@@ -1572,6 +1572,7 @@ dependencies = [
  "engine",
  "js-sys",
  "leptos",
+ "web-sys",
 ]
 
 [[package]]

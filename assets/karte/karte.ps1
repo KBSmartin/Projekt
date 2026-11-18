@@ -4,7 +4,7 @@
 #   boden_<region>.png     top-down ground per region (forest, desert, fortress)
 #   deko_<name>.png        upright decoration sprites (trees, rocks, ...)
 #   nebel.png              seamless fog texture
-#   wolke_<size><n>.png    cloud billows for the sea of fog (gross, mittel, klein)
+#   nebelballen.png        fog puff sprite
 # Also writes uebersicht.png next to this script. Deterministic.
 param([string]$Out = (Join-Path $PSScriptRoot '..\..\ui\assets\karte'))
 $ErrorActionPreference = 'Stop'
@@ -163,49 +163,9 @@ for ($y = 0; $y -lt $fw; $y++) { for ($x = 0; $x -lt $fw; $x++) {
 } }
 Save $fog 'nebel'
 
-# ---------- cloud billows for the fog (sea of clouds) ----------
-# Union of round bumps over a flat underside; each pixel is lit by the bump it
-# sits deepest in (light from the top left), tops pale and slightly rosy, the
-# underside lavender. No outline, the dark underside gives the shape.
-function Cloud([int]$w, [int]$h, [int]$seed) {
-  $r = [Random]::new($seed)
-  $tones = @('#4e4a70', '#706c96', '#9a96ba', '#c4c0da', '#e6e2f0', '#f8eef4') | ForEach-Object { [Drawing.ColorTranslator]::FromHtml($_) }
-  $n = [Math]::Max(3, [int]($w / 8))
-  $bumps = [Collections.Generic.List[object]]::new()
-  for ($k = 0; $k -lt $n; $k++) {
-    $rad = $h * (0.15 + 0.2 * [Math]::Sin([Math]::PI * ($k + 0.5) / $n)) * (0.9 + 0.2 * $r.NextDouble())
-    $bx = $w * (0.18 + 0.64 * $k / ($n - 1)) + ($r.NextDouble() - 0.5) * 2; $by = $h * 0.72 - $rad * 0.9
-    $bumps.Add(@{ x = $bx; y = $by; r = $rad })
-    # A second tier of smaller billows on the big middle ones.
-    if ($rad -gt $h * 0.27) { $bumps.Add(@{ x = $bx + ($r.NextDouble() - 0.5) * $rad * 0.6; y = $by - $rad * 0.75; r = $rad * 0.62 }) }
-  }
-  $bmp = [Drawing.Bitmap]::new($w, $h)
-  for ($y = 0; $y -lt $h; $y++) { for ($x = 0; $x -lt $w; $x++) {
-    if ($y -gt $h * 0.88) { continue }
-    $best = $null; $depth = 0
-    foreach ($b in $bumps) {
-      $d = 1 - [Math]::Sqrt([Math]::Pow($x + 0.5 - $b.x, 2) + [Math]::Pow($y + 0.5 - $b.y, 2)) / $b.r
-      if ($d -gt $depth) { $depth = $d; $best = $b }
-    }
-    # Flat, oval base under the bumps.
-    $u = ($x + 0.5 - $w / 2) / ($w * 0.46); $v = ($y + 0.5 - $h * 0.76) / ($h * 0.14)
-    $base = $u * $u + $v * $v -le 1
-    if (-not $best -and -not $base) { continue }
-    if ($best) { $nx = ($x + 0.5 - $best.x) / $best.r; $ny = ($y + 0.5 - $best.y) / $best.r } else { $nx = 0; $ny = 0.9 }
-    $lit = -0.45 * $nx - 0.9 * $ny - 0.35 * ($y / $h) + 1.1 * ($depth - 0.25)
-    $i = [int][Math]::Round(2.4 + 2.6 * $lit)
-    $i = [Math]::Max(0, [Math]::Min($tones.Count - 1, $i))
-    if ($y -ge [int]($h * 0.86) - 1) { $i = 0 }
-    $bmp.SetPixel($x, $y, $tones[$i])
-  } }
-  $bmp
-}
-Save (Cloud 40 28 71) 'wolke_gross1'
-Save (Cloud 40 28 72) 'wolke_gross2'
-Save (Cloud 28 20 73) 'wolke_mittel1'
-Save (Cloud 28 20 74) 'wolke_mittel2'
-Save (Cloud 18 13 75) 'wolke_klein1'
-Save (Cloud 18 13 76) 'wolke_klein2'
+Save (GridBmp @(
+    '.......gggg.............', '....gggllllgg...gggg....', '..ggllllllllgggglllllg..', '.gllllwwllllllllllwwllg.',
+    'glllwwwwlllllllllwwwlllg', 'gllllllllllllllllllllllg', '.ggllllllggggglllllllgg.', '...gggggg.....ggggggg...') -pad 1) 'nebelballen'
 
 # ---------- overview ----------
 $files = Get-ChildItem $Out -Filter *.png | Sort-Object Name
