@@ -63,34 +63,126 @@ fn kind_name(kind: NodeKind) -> &'static str {
     }
 }
 
-/// Decoration per region: sprite name, size in art pixels, weight.
-fn decor_set(region: &str) -> &'static [(&'static str, u32, u32, u32)] {
+/// A decoration sprite: file name (`deko_<name>` or `flach_<name>`), size in art pixels.
+type Sprite = (&'static str, u32, u32);
+
+/// A small scene for one spot of the board: an optional flat piece lying on the
+/// ground (pond, flowers, ...) with upright sprites around it.
+struct Theme {
+    flat: Option<Sprite>,
+    main: &'static [Sprite],
+    extra: &'static [Sprite],
+}
+
+const TANNE: Sprite = ("tanne", 11, 13);
+const BAUM: Sprite = ("baum", 12, 12);
+const BIRKE: Sprite = ("birke", 11, 12);
+const BUSCH: Sprite = ("busch", 10, 6);
+const STEIN: Sprite = ("stein", 9, 6);
+const PILZ: Sprite = ("pilz", 7, 6);
+const STUMPF: Sprite = ("stumpf", 9, 7);
+const KAKTUS: Sprite = ("kaktus", 10, 11);
+const FELS: Sprite = ("fels", 12, 7);
+const TOTBAUM: Sprite = ("totbaum", 10, 9);
+const KNOCHEN: Sprite = ("knochen", 10, 5);
+const PALME: Sprite = ("palme", 14, 12);
+const SAEULE: Sprite = ("saeule", 8, 12);
+const SCHAEDEL: Sprite = ("schaedel", 12, 8);
+const SCHNEETANNE: Sprite = ("schneetanne", 11, 13);
+const EIS: Sprite = ("eis", 10, 8);
+const SCHNEEFELS: Sprite = ("schneefels", 12, 7);
+const EISZAPFEN: Sprite = ("eiszapfen", 10, 8);
+const BANNER: Sprite = ("banner", 8, 12);
+const MAUER: Sprite = ("mauer", 14, 8);
+
+fn themes(region: &str) -> &'static [Theme] {
     match region {
         "desert" => &[
-            ("kaktus", 10, 11, 4),
-            ("fels", 12, 7, 3),
-            ("totbaum", 10, 9, 2),
-            ("knochen", 10, 5, 2),
-            ("stein", 9, 6, 2),
+            Theme {
+                flat: Some(("oase", 20, 9)),
+                main: &[PALME, PALME],
+                extra: &[KAKTUS, STEIN],
+            },
+            Theme {
+                flat: None,
+                main: &[KAKTUS, KAKTUS],
+                extra: &[STEIN, KNOCHEN],
+            },
+            Theme {
+                flat: None,
+                main: &[SAEULE, SAEULE],
+                extra: &[FELS, STEIN],
+            },
+            Theme {
+                flat: Some(("knochenfeld", 14, 6)),
+                main: &[SCHAEDEL],
+                extra: &[KNOCHEN, TOTBAUM],
+            },
+            Theme {
+                flat: None,
+                main: &[FELS],
+                extra: &[STEIN, TOTBAUM],
+            },
         ],
         "fortress" => &[
-            ("schneetanne", 11, 13, 5),
-            ("eis", 10, 8, 2),
-            ("schneefels", 12, 7, 3),
-            ("stein", 9, 6, 1),
+            Theme {
+                flat: None,
+                main: &[SCHNEETANNE, SCHNEETANNE],
+                extra: &[SCHNEEFELS, STEIN],
+            },
+            Theme {
+                flat: Some(("eissee", 24, 10)),
+                main: &[EISZAPFEN],
+                extra: &[EIS],
+            },
+            Theme {
+                flat: None,
+                main: &[MAUER, BANNER],
+                extra: &[SCHNEEFELS, STEIN],
+            },
+            Theme {
+                flat: Some(("verwehung", 14, 6)),
+                main: &[EIS],
+                extra: &[SCHNEETANNE],
+            },
         ],
         _ => &[
-            ("tanne", 11, 13, 5),
-            ("baum", 12, 12, 3),
-            ("busch", 10, 6, 3),
-            ("stein", 9, 6, 1),
-            ("pilz", 7, 6, 1),
+            Theme {
+                flat: None,
+                main: &[TANNE, TANNE, BAUM],
+                extra: &[BUSCH, STUMPF, PILZ],
+            },
+            Theme {
+                flat: Some(("teich", 22, 10)),
+                main: &[BUSCH],
+                extra: &[STEIN, BIRKE],
+            },
+            Theme {
+                flat: None,
+                main: &[BIRKE, BIRKE, BAUM],
+                extra: &[BUSCH, PILZ],
+            },
+            Theme {
+                flat: Some(("blumen", 12, 6)),
+                main: &[STUMPF],
+                extra: &[PILZ, STEIN],
+            },
+            Theme {
+                flat: None,
+                main: &[STEIN],
+                extra: &[BUSCH, TANNE],
+            },
         ],
     }
 }
 
-/// Distance from point p to the segment a-b (in plane percent).
-fn seg_dist(p: (f64, f64), a: (f64, f64), b: (f64, f64)) -> f64 {
+/// Plane percentages are stretched (the plane is much wider than deep); this
+/// scales x so distances are roughly even on screen.
+const XS: f64 = 3.0;
+
+/// Distance from point p to the segment a-b, in the evened-out scale.
+fn seg_dist(p: Pt, a: Pt, b: Pt) -> f64 {
+    let (p, a, b) = ((p.0 * XS, p.1), (a.0 * XS, a.1), (b.0 * XS, b.1));
     let (dx, dy) = (b.0 - a.0, b.1 - a.1);
     let len2 = dx * dx + dy * dy;
     let t = if len2 > 0.0 {
@@ -163,52 +255,97 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         })
         .collect_view();
 
-    // --- Decoration, kept away from nodes and paths and out of the fog.
-    let set = decor_set(&rid);
-    let total: u32 = set.iter().map(|s| s.3).sum();
-    let all_links: Vec<((f64, f64), (f64, f64))> = map
+    // --- Decoration: a few small scenes (grove, pond, ruins, ...) with open
+    // ground between them, kept away from fields and paths and out of the fog.
+    let all_links: Vec<(Pt, Pt)> = map
         .nodes
         .iter()
         .flat_map(|n| n.next.iter().map(move |&b| (n.id, b)))
         .map(|(a, b)| (pos(a), pos(b)))
         .chain(map.rows[0].iter().map(|&b| (START, pos(b))))
         .collect();
-    let mut decor = Vec::new();
+    let free = |x: f64, y: f64, room: f64| {
+        (2.0..=98.0).contains(&x)
+            && (4.0..=96.0).contains(&y)
+            && !fog_x.is_some_and(|f| x > f - 2.0)
+            && map
+                .nodes
+                .iter()
+                .map(|n| pos(n.id))
+                .chain(std::iter::once(START))
+                .all(|p| ((p.0 - x) * XS).hypot(p.1 - y) > 9.0 + room)
+            && all_links
+                .iter()
+                .all(|&(a, b)| seg_dist((x, y), a, b) > 3.5 + room)
+    };
+    let set = themes(&rid);
+    let mut flats: Vec<(f64, f64, Sprite)> = Vec::new();
+    let mut uprights: Vec<(f64, f64, Sprite)> = Vec::new();
+    let mut centres: Vec<Pt> = Vec::new();
     let mut h = mix(salt ^ 0xDEC0);
-    for _ in 0..240 {
-        h = mix(h);
-        let x = 1.0 + (unit(h) + 1.0) * 49.0;
-        let y = 3.0 + (unit(mix(h ^ 7)) + 1.0) * 47.0;
-        if fog_x.is_some_and(|f| x > f - 1.5) {
-            continue;
-        }
-        let near_node = map.nodes.iter().any(|n| {
-            let p = pos(n.id);
-            ((p.0 - x) / 1.4).powi(2) + (p.1 - y).powi(2) < 64.0
-        }) || ((START.0 - x).powi(2) + (START.1 - y).powi(2)) < 49.0;
-        if near_node || all_links.iter().any(|&(a, b)| seg_dist((x, y), a, b) < 3.6) {
-            continue;
-        }
-        let mut pick = (mix(h ^ 99) % total as u64) as u32;
-        let (name, w, ht, _) = *set
-            .iter()
-            .find(|s| {
-                if pick < s.3 {
-                    true
-                } else {
-                    pick -= s.3;
-                    false
-                }
-            })
-            .unwrap_or(&set[0]);
-        decor.push((x, y, name, w, ht));
-        if decor.len() >= 46 {
+    let first = (h % set.len() as u64) as usize;
+    for _ in 0..90 {
+        if centres.len() >= 9 {
             break;
         }
+        h = mix(h);
+        let (cx, cy) = (
+            2.0 + (unit(h) + 1.0) * 48.0,
+            6.0 + (unit(mix(h ^ 7)) + 1.0) * 45.0,
+        );
+        if !free(cx, cy, 2.5)
+            || centres
+                .iter()
+                .any(|c| ((c.0 - cx) * XS).hypot(c.1 - cy) < 22.0)
+        {
+            continue;
+        }
+        // Themes take turns, so neighbouring scenes differ.
+        let theme = &set[(first + centres.len()) % set.len()];
+        centres.push((cx, cy));
+        if let Some(flat) = theme.flat {
+            flats.push((cx, cy, flat));
+        }
+        let count = 2 + (mix(h ^ 3) % 4) as usize;
+        for k in 0..count {
+            let hk = mix(h ^ (k as u64 + 11));
+            let angle = unit(hk) * std::f64::consts::PI;
+            let r = if theme.flat.is_some() { 6.5 } else { 2.0 } + (unit(mix(hk)) + 1.0) * 2.5;
+            let (x, y) = (cx + angle.cos() * r / XS, cy + angle.sin() * r);
+            if !free(x, y, 0.0)
+                || uprights
+                    .iter()
+                    .any(|u| ((u.0 - x) * XS).hypot(u.1 - y) < 3.0)
+            {
+                continue;
+            }
+            let pool = if k < theme.main.len() {
+                theme.main
+            } else {
+                theme.extra
+            };
+            if pool.is_empty() {
+                continue;
+            }
+            uprights.push((x, y, pool[(mix(hk ^ 5) % pool.len() as u64) as usize]));
+        }
     }
-    let decor = decor
+    let flats = flats
         .into_iter()
-        .map(|(x, y, name, w, ht)| {
+        .map(|(x, y, (name, w, ht))| {
+            view! {
+                <img
+                    class="flat"
+                    src=format!("assets/karte/flach_{name}.png")
+                    alt=""
+                    style=format!("left:{x:.2}%;top:{y:.2}%;width:{}px;height:{}px", w * 4, ht * 4)
+                />
+            }
+        })
+        .collect_view();
+    let decor = uprights
+        .into_iter()
+        .map(|(x, y, (name, w, ht))| {
             standing(
                 x,
                 y,
@@ -316,9 +453,9 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             while y < 100.0 {
                 h = mix(h);
                 spots.push((x + unit(h) * 2.5, y, 0.8 + (unit(mix(h)) + 1.0) * 0.35));
-                y += 14.0 + (unit(mix(h ^ 3)) + 1.0) * 4.0;
+                y += 18.0 + (unit(mix(h ^ 3)) + 1.0) * 5.0;
             }
-            x += 8.5;
+            x += 11.0;
         }
         let puffs = spots
             .into_iter()
@@ -383,6 +520,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                     "background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%;left:{cam:.2}%",
                 )
             >
+                {flats}
                 <svg class="trails" viewBox="0 0 100 100" preserveAspectRatio="none">{paths}</svg>
                 {nodes}
                 {decor}

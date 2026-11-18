@@ -422,3 +422,25 @@ h3 { font-size: 12px; font-weight: 400; }
 .hero .piece { width: 96px; height: 128px; filter: drop-shadow(0 5px 0 #0008); }
 .hero.walk .piece { animation: piece-hop .9s ease-in-out; }
 @keyframes piece-hop { 0% { transform: translateY(0); } 22% { transform: translateY(-34px); } 78% { transform: translateY(-34px); } 100% { transform: translateY(0); } }
+.flat { position: absolute; transform: translate(-50%, -50%) translateZ(1px); image-rendering: pixelated; pointer-events: none; }
+
+/* Start screen and character choice. */
+.start { min-height: 100vh; display: grid; align-content: center; justify-items: center; text-align: center; gap: 6px; padding-bottom: 8vh; }
+.start h1 { font-size: 56px; margin: 6px 0 4px; text-shadow: 6px 6px 0 #000, 0 0 30px #0008; animation: title-in 1.2s steps(6) both; }
+.start .lead { margin: 10px auto 22px; text-shadow: 2px 2px 0 #000; }
+.start .how { text-align: left; margin: 18px auto 0; background: #0c0a10d0; border: 2px solid var(--line); padding: 14px 18px 14px 32px; box-shadow: 4px 4px 0 #000; }
+.menu { display: grid; gap: 14px; justify-items: stretch; min-width: 280px; }
+.btn.big { font-size: 16px; padding: 18px 28px; animation: btn-glow 1.6s steps(2) infinite; }
+.menu .btn.ghost { background: #0c0a10b0; }
+@keyframes title-in { from { opacity: 0; transform: translateY(-16px); } }
+@keyframes btn-glow { 50% { box-shadow: inset -3px -3px 0 #0005, inset 3px 3px 0 #fff3, 0 0 0 4px color-mix(in srgb, var(--acc) 45%, transparent); } }
+.choose-h { text-align: center; font-size: 24px; margin: 4vh 0 18px; text-shadow: 4px 4px 0 #000; }
+.title .back { display: block; margin: 22px auto 0; background: #0c0a10b0; }
+
+/* Pixel wipe between screens: rotated squares growing left to right. */
+.wipe { position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: repeat(14, 1fr); overflow: hidden; pointer-events: all; }
+.wipe i { background: #0a080c; transform: rotate(45deg) scale(0); }
+.wipe.closing i { animation: wipe-grow 300ms steps(5) forwards; animation-delay: var(--d); }
+.wipe.opening i { transform: rotate(45deg) scale(1.5); animation: wipe-shrink 300ms steps(5) forwards; animation-delay: var(--d); }
+@keyframes wipe-grow { to { transform: rotate(45deg) scale(1.5); } }
+@keyframes wipe-shrink { to { transform: rotate(45deg) scale(0); } }

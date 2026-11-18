@@ -1,7 +1,7 @@
 //! All screens. Each function renders one phase of the run from a snapshot
 //! and turns clicks into engine actions via [`Game::act`].
 
-use crate::{Game, data, text};
+use crate::{Game, TitlePage, data, text};
 use engine::{
     Card, CardInstance, CardKind, Combat, EventResult, EventState, Phase, PickState, Rarity,
     Reward, RewardSource, Run, Shop, Statuses, needs_target,
@@ -12,7 +12,10 @@ use leptos::prelude::*;
 pub fn screen(game: Game) -> AnyView {
     let deck_open = game.deck_open.get();
     game.run.with(|run| match run {
-        None => title(game),
+        None => match game.title_page.get() {
+            TitlePage::Start => start_screen(game),
+            TitlePage::Choose => choose_screen(game),
+        },
         Some(run) => {
             let d = data();
             let color = d.regions[run.region].color.clone();
@@ -149,7 +152,60 @@ fn side_panel(game: Game, run: &Run, hp: i32, max_hp: i32) -> AnyView {
 
 // ---------- title ----------
 
-fn title(game: Game) -> AnyView {
+/// Pixel wipe over the whole window: a grid of tiles that grow (closing) or
+/// shrink (opening) from left to right, the same direction as the map.
+pub fn wipe(cover: crate::Cover) -> AnyView {
+    const COLS: usize = 24;
+    const ROWS: usize = 14;
+    let class = match cover {
+        crate::Cover::Off => return ().into_any(),
+        crate::Cover::Closing => "wipe closing",
+        crate::Cover::Opening => "wipe opening",
+    };
+    let tiles = (0..ROWS * COLS)
+        .map(|i| {
+            let (c, r) = (i % COLS, i / COLS);
+            view! { <i style=format!("--d:{}ms", c * 6 + r * 3)></i> }
+        })
+        .collect_view();
+    view! { <div class=class aria-hidden="true">{tiles}</div> }.into_any()
+}
+
+/// Start screen: title, a short teaser and the main buttons.
+fn start_screen(game: Game) -> AnyView {
+    let help = RwSignal::new(false);
+    view! {
+        {backdrop("title")}
+        <main class="app">
+            <div class="start">
+                <div class="kicker">"Ein Deckbuilder-Roguelike · Vorab-Version"</div>
+                <h1>"Verlorene Lande"</h1>
+                <p class="lead">
+                    "Drei Gebiete, ein Deck, das du unterwegs selbst schmiedest, und am Ende jedes Weges ein Boss."
+                </p>
+                <nav class="menu">
+                    <button class="btn big" on:click=move |_| game.show_title(TitlePage::Choose)>
+                        "Spiel starten"
+                    </button>
+                    <button class="btn ghost" on:click=move |_| help.update(|h| *h = !*h)>
+                        {move || if help.get() { "Anleitung schließen" } else { "Anleitung" }}
+                    </button>
+                </nav>
+                <Show when=move || help.get()>
+                    <ul class="how">
+                        <li>"Jede Runde: 3 Energie, 5 Karten. Gegner zeigen dir, was sie als Nächstes tun."</li>
+                        <li>"Auf der Karte wählst du deinen Weg: Kämpfe, Händler, Rastplätze und Ereignisse. Was weiter voraus liegt, verbirgt der Nebel."</li>
+                        <li>"Stirbst du, beginnt ein neuer Lauf. Es wird nichts gespeichert."</li>
+                    </ul>
+                </Show>
+            </div>
+        </main>
+    }
+    .into_any()
+}
+
+/// Character choice, its own screen after the start screen.
+fn choose_screen(game: Game) -> AnyView {
     let d = data();
     let characters = d
         .characters
@@ -176,18 +232,11 @@ fn title(game: Game) -> AnyView {
         {backdrop("title")}
         <main class="app">
             <div class="title">
-                <div class="kicker">"Ein Deckbuilder-Roguelike · Vorab-Version"</div>
-                <h1>"Verlorene Lande"</h1>
-                <p class="lead">
-                    "Drei Gebiete, ein Deck, das du unterwegs selbst schmiedest, und am Ende jedes Weges ein Boss."
-                </p>
-                <ul class="how">
-                    <li>"Jede Runde: 3 Energie, 5 Karten. Gegner zeigen dir, was sie als Nächstes tun."</li>
-                    <li>"Auf der Karte wählst du deinen Weg: Kämpfe, Händler, Rastplätze und Ereignisse."</li>
-                    <li>"Stirbst du, beginnt ein neuer Lauf. Es wird nichts gespeichert."</li>
-                </ul>
-                <h2>"Wähle deinen Charakter"</h2>
+                <h2 class="choose-h">"Wähle deinen Charakter"</h2>
                 <div class="chars">{characters}</div>
+                <button class="btn ghost back" on:click=move |_| game.show_title(TitlePage::Start)>
+                    "Zurück"
+                </button>
             </div>
         </main>
     }

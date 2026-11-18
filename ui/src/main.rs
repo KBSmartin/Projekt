@@ -107,6 +107,42 @@ fn any_line(lines: &[&'static str]) -> &'static str {
     lines[(js_sys::Math::random() * lines.len() as f64) as usize % lines.len()]
 }
 
+/// Pages before a run: the start screen and the character choice.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TitlePage {
+    Start,
+    Choose,
+}
+
+/// State of the pixel wipe between screens.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Cover {
+    Off,
+    /// Tiles grow until the screen is covered.
+    Closing,
+    /// The new screen is behind; the tiles shrink away.
+    Opening,
+}
+
+/// One half of the wipe (CSS matches: tile delays plus tile animation).
+const WIPE: Duration = Duration::from_millis(440);
+
+/// Which screen a run state shows, to tell whether an action changes it.
+fn screen_kind(run: Option<&Run>) -> u8 {
+    match run.map(|r| &r.phase) {
+        None => 0,
+        Some(Phase::RegionIntro) => 1,
+        Some(Phase::Map) => 2,
+        Some(Phase::Combat(_)) => 3,
+        Some(Phase::Reward(_)) => 4,
+        Some(Phase::Shop(_)) => 5,
+        Some(Phase::Rest) => 6,
+        Some(Phase::Event(_)) => 7,
+        Some(Phase::Pick(_)) => 8,
+        Some(Phase::Victory | Phase::Defeat) => 9,
+    }
+}
+
 /// Player HP and poison, inside a fight from the fight itself.
 fn vitals(run: &Run) -> (i32, u32) {
     match &run.phase {
@@ -132,6 +168,8 @@ pub struct Game {
     pub leaving_shop: RwSignal<bool>,
     /// Map node the hero figure is walking to; the step happens on arrival.
     pub walking: RwSignal<Option<usize>>,
+    pub title_page: RwSignal<TitlePage>,
+    pub cover: RwSignal<Cover>,
     finishing: RwSignal<bool>,
 }
 
@@ -146,8 +184,34 @@ impl Game {
             merchant_line: RwSignal::new(""),
             leaving_shop: RwSignal::new(false),
             walking: RwSignal::new(None),
+            title_page: RwSignal::new(TitlePage::Start),
+            cover: RwSignal::new(Cover::Off),
             finishing: RwSignal::new(false),
         }
+    }
+
+    /// Covers the screen with the pixel wipe, runs `f` while it is covered,
+    /// then uncovers the new screen. During a running wipe `f` runs at once,
+    /// so no state change is ever dropped.
+    fn wipe(self, f: impl FnOnce() + 'static) {
+        if self.cover.get_untracked() != Cover::Off {
+            f();
+            return;
+        }
+        self.cover.set(Cover::Closing);
+        set_timeout(
+            move || {
+                f();
+                self.cover.set(Cover::Opening);
+                set_timeout(move || self.cover.set(Cover::Off), WIPE);
+            },
+            WIPE,
+        );
+    }
+
+    /// Switches between start screen and character choice.
+    pub fn show_title(self, page: TitlePage) {
+        self.wipe(move || self.title_page.set(page));
     }
 
     /// The hero figure walks over the map to the chosen node, then the run
@@ -214,38 +278,61 @@ impl Game {
 
     pub fn start_run_with_seed(self, character: &str, seed: u64) {
         match Run::new(data(), character, seed) {
-            Ok(run) => {
+            Ok(run) => self.wipe(move || {
                 self.selected.set(None);
                 self.deck_open.set(false);
                 self.play(PortraitAnim::Idle);
                 self.run.set(Some(run));
-            }
+            }),
             Err(e) => leptos::logging::error!("Lauf konnte nicht starten: {e}"),
         }
     }
 
     pub fn to_title(self) {
-        self.run.set(None);
+        self.wipe(move || {
+            self.title_page.set(TitlePage::Start);
+            self.run.set(None);
+        });
     }
 
-    /// Runs an engine action on the current run. When it ends a fight, the
-    /// fight stays visible for a moment and then moves on to the result.
+    /// Runs an engine action on a copy of the run and shows the result. When
+    /// it ends a fight, the fight stays visible for a moment and then moves on
+    /// to the result. Input during a screen wipe is ignored.
     pub fn act(self, f: impl FnOnce(&mut Run, &GameData) -> Result<(), ActionError>) {
-        self.selected.set(None);
-        let before = self.vitals();
-        let was_shop = self.in_shop();
-        self.run.update(|run| {
-            if let Some(run) = run
-                && let Err(e) = f(run, data())
-            {
-                leptos::logging::warn!("Aktion abgelehnt: {e}");
-            }
-        });
-        self.react(before);
-        if !was_shop && self.in_shop() {
-            self.greet();
+        if self.cover.get_untracked() != Cover::Off {
+            return;
         }
-        self.schedule_combat_end();
+        self.selected.set(None);
+        let Some(mut next) = self.run.get_untracked() else {
+            return;
+        };
+        if let Err(e) = f(&mut next, data()) {
+            leptos::logging::warn!("Aktion abgelehnt: {e}");
+            return;
+        }
+        self.commit(next);
+    }
+
+    /// Shows a new run state; when it changes the screen, behind a wipe.
+    /// Not generic, so `act` and the delayed combat end can share it.
+    fn commit(self, next: Run) {
+        let changes =
+            self.run.with_untracked(|r| screen_kind(r.as_ref())) != screen_kind(Some(&next));
+        let apply = move || {
+            let before = self.vitals();
+            let was_shop = self.in_shop();
+            self.run.set(Some(next));
+            self.react(before);
+            if !was_shop && self.in_shop() {
+                self.greet();
+            }
+            self.schedule_combat_end();
+        };
+        if changes {
+            self.wipe(apply);
+        } else {
+            apply();
+        }
     }
 
     fn in_shop(self) -> bool {
@@ -307,15 +394,13 @@ impl Game {
         set_timeout(
             move || {
                 self.finishing.set(false);
-                let before = self.vitals();
-                self.run.update(|run| {
-                    if let Some(run) = run
-                        && let Err(e) = run.finish_combat(data())
-                    {
-                        leptos::logging::warn!("Kampfende abgelehnt: {e}");
-                    }
-                });
-                self.react(before);
+                let Some(mut next) = self.run.get_untracked() else {
+                    return;
+                };
+                match next.finish_combat(data()) {
+                    Ok(()) => self.commit(next),
+                    Err(e) => leptos::logging::warn!("Kampfende abgelehnt: {e}"),
+                }
             },
             COMBAT_END_DELAY,
         );
@@ -342,6 +427,7 @@ fn App() -> impl IntoView {
         <div class="root">
             {move || views::screen(game)}
             {debug}
+            {move || views::wipe(game.cover.get())}
         </div>
     }
     .into_any()

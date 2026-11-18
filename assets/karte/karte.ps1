@@ -71,8 +71,39 @@ $deko = [ordered]@{
   schneetanne = @('....w....', '...wsK...', '..wwOKK..', '...wOK...', '..wwOOKK.', '.wwOOOKKK', '..wwOOKK.', '.wwOOOOKK', 'wwOOOOKKK', '...JbJ...', '....b....')
   eis         = @('...s....', '..ssS...', '.wsSS..s', '.wsSS.sS', 'wssSSSsS', 'SSSSSSSS')
   schneefels  = @('...www....', '..wwwlg...', '.wwlggdd..', 'lgggggddd.', '.dddddddd.')
+  birke       = @('..PPOO...', '.PPPOOK..', 'PPPOOOKK.', '.POOOKKK.', '..OKKK...', '...wd....', '...ww....', '...dw....', '...ww....', '..wwd....')
+  stumpf      = @('.BlllB.', 'BlBBlBb', 'BBBBBBb', 'bBBBBbb', 'b.bb..b')
+  palme       = @('.OO...PP....', 'O..OPPOOP...', '....OOO.OK..', '...KOBO...K.', '..K..B......', '.....B......', '......B.....', '......B.....', '......Bb....', '.....BBb....')
+  saeule      = @('.l.ll.', 'lllggd', '.llgd.', '.llgd.', '.llgd.', '.lggd.', '.llgd.', '.llgd.', 'lllggd', 'gggddd')
+  schaedel    = @('..wwww....', '.wwwwwwl..', 'ww0ww0wl..', 'wwwwwwwl..', '.w0w0wl...', '..wwwl....')
+  eiszapfen   = @('..w.....', '..s...w.', '.wsS..s.', '.wsS.wsS', 'wssSswsS', 'SSSSSSSS')
+  banner      = @('brrrrr', 'brrirr', 'briiir', 'brrir.', 'brr.r.', 'b.....', 'b.....', 'b.....', 'b.....', 'bb....')
+  mauer       = @('...l........', '..lgl..l....', '.lggdllgl...', 'lglgdlggdl..', 'lggdlggdlgd.', 'ddddddddddd.')
 }
 foreach ($k in $deko.Keys) { Save (GridBmp $deko[$k] -Outline -pad 1) "deko_$k" }
+
+# ---------- flat decals (lie on the board) ----------
+# Ellipse of $fill with an $edge ring and a highlight streak, optional extra dots.
+function FlatGrid([int]$w, [int]$h, [char]$fill, [char]$edge, [char]$lite, [string]$dots, [int]$seed) {
+  $r = [Random]::new($seed); $rows = @()
+  for ($y = 0; $y -lt $h; $y++) {
+    $row = ''
+    for ($x = 0; $x -lt $w; $x++) {
+      $u = ($x + 0.5 - $w / 2) / ($w / 2); $v = ($y + 0.5 - $h / 2) / ($h / 2); $d = $u * $u + $v * $v
+      $ch = if ($d -gt 1) { '.' } elseif ($d -gt 0.68) { $edge } elseif ($v -lt -0.2 -and $u -lt 0 -and $u -gt -0.6 -and $y % 2 -eq 0) { $lite } else { $fill }
+      if ($ch -eq $fill -and $dots -and $r.Next(0, 9) -eq 0) { $ch = $dots[$r.Next(0, $dots.Length)] }
+      $row += $ch
+    }
+    $rows += $row
+  }
+  , $rows
+}
+Save (GridBmp (FlatGrid 22 10 'S' 'K' 's' '' 1)) 'flach_teich'
+Save (GridBmp (FlatGrid 12 6 'O' '.' 'P' 'yrqw' 2)) 'flach_blumen'
+Save (GridBmp (FlatGrid 20 9 'S' 'O' 's' '' 3)) 'flach_oase'
+Save (GridBmp (FlatGrid 14 6 'B' '.' 'v' 'wl' 4)) 'flach_knochenfeld'
+Save (GridBmp (FlatGrid 24 10 's' 'w' 'z' 'S' 5)) 'flach_eissee'
+Save (GridBmp (FlatGrid 14 6 'z' '.' 'w' 'x' 6)) 'flach_verwehung'
 
 # ---------- value noise (tileable) ----------
 function NoiseGrid([int]$w, [int]$h, [int]$cell, [int]$seed) {
