@@ -1,9 +1,9 @@
 # The hand that sets a piece on the board, as plain pixel art: back of the hand
-# towards the viewer, wrist and dark sleeve leaving at the top right, index
+# towards the viewer, the bare wrist leaving at the top (left once mirrored), index
 # finger (left) and thumb (right) forming an oval and pinching the piece head,
 # the middle finger curled behind the index. Few skin tones, dark outline.
-# Writes ui/assets/karte/hand.png (28x28). The pinch point (between the finger
-# tips) is pixel (13, 24); the CSS places it on the piece head.
+# Writes ui/assets/karte/hand.png (28x28), mirrored. The pinch point (between the finger
+# tips) is pixel (14.7, 24) after mirroring; the CSS places it on the piece head.
 param([string]$Out = (Join-Path $PSScriptRoot '..\..\ui\assets\karte\hand.png'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -41,12 +41,9 @@ function Stroke([double[]]$p, [double]$r, [char]$ch) {
 # Each part gets its own dark outline (a wider stroke underneath), so fingers
 # read separately where they overlap the hand, as in hand-drawn pixel art.
 function Part([double[]]$p, [double]$r, [char]$fill) { Stroke $p ($r + 0.85) '0'; Stroke $p $r $fill }
-# Sleeve and forearm leaving at the top right.
-Part @(29, -2, 21.5, 5.5) 5.0 '3'
-Stroke @(29, -1, 24, 3.5) 3.4 '2'
-Part @(21.2, 5.4, 15.5, 9.5) 3.5 'e'
-Stroke @(23.5, 3.2, 19.2, 7.6) 1.0 'l'
-Stroke @(24.2, 4.2, 20.2, 8.6) 0.5 'L'
+# Just the wrist, ending in a rounded cut at the top right (no sleeve).
+Part @(24.5, 2.2, 15.5, 9.5) 3.1 'e'
+Stroke @(25.2, 3.2, 19.2, 8.0) 1.0 'c'
 # Back of the hand.
 Poly @(7.2, 6.4, 15.6, 3.6, 21.6, 9.0, 20.2, 15.6, 10.0, 16.8, 4.0, 12.4) '0'
 Poly @(8, 7, 15.4, 4.6, 20.6, 9.2, 19.4, 14.8, 10.2, 15.8, 5, 12.2) 'e'
@@ -65,6 +62,10 @@ Ell 13.3 18.4 1.9 3.4 '.'
 # Finger nails at the tips.
 Px 10 23 'k'; Px 11 23 'k'; Px 15 23 'k'; Px 16 23 'k'
 
+# Cut the wrist off with a straight edge across its direction.
+$ex = 21.6; $ey = 4.6; $dx = 0.78; $dy = -0.63
+for ($y = 0; $y -lt $N; $y++) { for ($x = 0; $x -lt $N; $x++) { if ((($x + 0.5 - $ex) * $dx + ($y + 0.5 - $ey) * $dy) -gt 0) { $g[$x, $y] = '.' } } }
+
 # Dark outline around everything, including the open oval.
 $o = @()
 for ($y = 0; $y -lt $N; $y++) { for ($x = 0; $x -lt $N; $x++) {
@@ -74,4 +75,6 @@ for ($y = 0; $y -lt $N; $y++) { for ($x = 0; $x -lt $N; $x++) {
 foreach ($p in $o) { $g[$p[0], $p[1]] = '0' }
 $bmp = [Drawing.Bitmap]::new($N, $N)
 for ($y = 0; $y -lt $N; $y++) { for ($x = 0; $x -lt $N; $x++) { $ch = [string]$g[$x, $y]; if ($ch -ne '.') { $bmp.SetPixel($x, $y, $pal[$ch]) } } }
+# Drawn reaching in from the right, saved mirrored so it comes from the left.
+$bmp.RotateFlip([Drawing.RotateFlipType]::RotateNoneFlipX)
 $bmp.Save([IO.Path]::GetFullPath($Out)); $bmp.Dispose()

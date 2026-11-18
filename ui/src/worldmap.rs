@@ -11,6 +11,8 @@ use leptos::prelude::*;
 const SIGHT: i32 = 2;
 /// Width of the plane in percent of the view; the camera follows the hero.
 const SPAN: f64 = 320.0;
+/// Where the hero stands, in percent of the window width.
+const HERO_AT: f64 = 32.0;
 /// Where the hero stands before the first step.
 const START: (f64, f64) = (3.5, 58.0);
 
@@ -246,7 +248,9 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         (None, None) => START,
     };
     // Camera: the hero stands about a fifth into the view, without leaving the plane.
-    let cam = (16.0 - here.0 * SPAN / 100.0).clamp(98.0 - SPAN, 2.0);
+    // The board spans the whole window under the side panel; the hero stands
+    // about a third in, right of the panel.
+    let cam = (HERO_AT - here.0 * SPAN / 100.0).clamp(98.0 - SPAN, 20.0);
 
     // --- Paths: every link out of a visible node (links into the fog vanish in it).
     let mut links: Vec<(Pt, Pt, &'static str)> = Vec::new();
@@ -528,7 +532,6 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             >
                 <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
                 <div class="hand">
-                    <i class="arm"></i>
                     <img src="assets/karte/hand.png" alt="" />
                 </div>
             </div>
@@ -539,44 +542,53 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     // falls running down the edges of the board.
     let fog = fog_x.map(|fx| {
         let left = fx - 2.0;
-        // A wall of puffs along the edge, then loose banks over the whole fog.
-        let mut spots: Vec<(f64, f64, f64)> = (0..10)
-            .map(|i| {
-                (
-                    fx + 0.5 + unit(mix(salt ^ i)) * 1.2,
-                    2.0 + i as f64 * 10.6,
-                    1.25,
-                )
-            })
-            .collect();
+        // A sea of clouds: billows packed in rows from the back to the front,
+        // big ones at the leading edge and near the viewer, all slowly
+        // rolling. Along the front edge clouds keep pouring over the rim.
+        const SIZES: [(&str, f64, f64); 3] = [("gross", 40.0, 28.0), ("mittel", 28.0, 20.0), ("klein", 18.0, 13.0)];
+        let mut clouds: Vec<(f64, f64, usize, u64, &'static str)> = Vec::new();
         let mut h = mix(salt ^ 0xF06);
-        let mut x = fx + 7.0;
-        while x < 99.0 {
-            let mut y = 4.0 + (unit(h) + 1.0) * 4.0;
-            while y < 100.0 {
+        let mut y = 2.0;
+        while y < 101.0 {
+            let mut x = fx + 0.8 + (unit(mix(h ^ 5)) + 1.0) * 1.2;
+            while x < 101.0 {
                 h = mix(h);
-                spots.push((x + unit(h) * 2.5, y, 0.8 + (unit(mix(h)) + 1.0) * 0.35));
-                y += 18.0 + (unit(mix(h ^ 3)) + 1.0) * 5.0;
+                let edge = x < fx + 4.0;
+                let size = if edge || y > 80.0 { (h % 2) as usize } else { (h % 3) as usize };
+                clouds.push((x + unit(h) * 1.0, y + unit(mix(h)) * 2.0, size, h, "roll"));
+                x += if size == 0 { 4.6 } else if size == 1 { 3.4 } else { 2.6 };
             }
-            x += 8.0;
+            y += 7.5;
         }
-        let puffs = spots
+        // Clouds tumbling over the front edge, staggered.
+        let mut x = fx + 1.0;
+        let mut k = 0u64;
+        while x < 100.0 {
+            h = mix(h ^ k);
+            clouds.push((x + unit(h) * 1.2, 100.5, (h % 2) as usize, h, "spill"));
+            x += 3.2;
+            k += 1;
+        }
+        let puffs = clouds
             .into_iter()
-            .enumerate()
-            .map(|(i, (x, y, s))| {
+            .map(|(x, y, size, h, kind)| {
+                let (name, w, ht) = SIZES[size];
+                let variant = 1 + (h >> 7) % 2;
+                let dur = if kind == "spill" { 7.0 + (h % 40) as f64 / 10.0 } else { 6.0 + (h % 60) as f64 / 10.0 };
+                let delay = (h >> 13) % 100;
                 standing(
                     x,
                     y,
-                    "puff",
+                    &format!("cloud {kind}"),
                     view! {
                         <img
-                            src="assets/karte/nebelballen.png"
+                            src=format!("assets/karte/wolke_{name}{variant}.png")
                             alt=""
                             style=format!(
-                                "width:{:.0}px;height:{:.0}px;animation-delay:-{}s",
-                                104.0 * s,
-                                40.0 * s,
-                                i * 7 % 5,
+                                "width:{:.0}px;height:{:.0}px;animation-duration:{dur:.1}s;animation-delay:-{:.1}s",
+                                w * 5.0,
+                                ht * 5.0,
+                                dur * delay as f64 / 100.0,
                             )
                         />
                     }
@@ -625,9 +637,8 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             .ok()
             .and_then(|w| w.as_f64())
             .unwrap_or(1280.0)
-            - 190.0
     };
-    let clamp_pan = move |p: f64| p.clamp(98.0 - SPAN - cam, 2.0 - cam);
+    let clamp_pan = move |p: f64| p.clamp(98.0 - SPAN - cam, 20.0 - cam);
     // Zoomed in, the board may move up or down by as much as it grew.
     let clamp_y = move |y: f64, z: f64| {
         let room = (z - 1.0).max(0.0) * 420.0;

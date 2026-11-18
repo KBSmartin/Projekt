@@ -385,11 +385,10 @@ h3 { font-size: 12px; font-weight: 400; }
 .fogwar { position: absolute; top: -7%; bottom: -16px; right: -16px; transform: translateZ(2px);
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); mask-image: linear-gradient(90deg, transparent 0, #0008 50px, #000 120px), linear-gradient(180deg, transparent 0, #000 70px); -webkit-mask-composite: source-in; mask-composite: intersect; background: url(assets/karte/nebel.png) 0 0 / 384px 384px; image-rendering: pixelated; animation: fog-a 48s steps(96) infinite; }
 .fogwar::after { content: ""; position: absolute; inset: 0; background: inherit; background-size: 256px 256px; opacity: .45; animation: fog-b 32s steps(64) infinite; }
+.fogwar { filter: brightness(.62) saturate(1.2); }
 /* Each layer moves exactly one tile width, so the loop has no visible jump. */
 @keyframes fog-a { from { background-position: 0 0; } to { background-position: 384px 0; } }
 @keyframes fog-b { from { background-position: 0 0; } to { background-position: -256px 0; } }
-.puff img { animation: puff-bob 3s steps(3) infinite alternate; opacity: .95; }
-@keyframes puff-bob { to { transform: translateY(-6px) translateX(4px); } }
 
 
 /* Board game look: wooden rim with a visible front edge, round painted fields,
@@ -467,15 +466,13 @@ h3 { font-size: 12px; font-weight: 400; }
 .spot.k-start.vis { filter: saturate(.2) brightness(.55); }
 
 /* A hand lowers the piece onto the chosen start point and pulls back up. */
-/* Hand: 28x28 pixel art at 4x; the pinch (13,24) sits on the piece head (48,61). */
-.hero .hand { display: none; position: absolute; left: -5px; top: -35px; width: 112px; height: 112px; filter: drop-shadow(0 6px 0 #0006); }
+/* Hand: 28x28 pixel art at 4x, reaching in from the left; the pinch (14.7,24) sits on the piece head (48,61). */
+.hero .hand { display: none; position: absolute; left: -11px; top: -35px; width: 112px; height: 112px; filter: drop-shadow(0 6px 0 #0006); }
 .hero .hand img { position: relative; width: 112px; height: 112px; image-rendering: pixelated; }
-/* The sleeve goes on as a long arm up and to the right, out of view. */
-.hero .hand .arm { position: absolute; left: 82px; top: -896px; width: 40px; height: 900px; transform-origin: 50% 100%; transform: rotate(45deg); background: linear-gradient(90deg, #3a3246 0 30%, #241e2c 30%); border: 4px solid #140c0c; border-bottom: 0; }
 .hero.placing .hand { display: block; animation: hand-place 3s ease-in-out both; }
 .hero.placing .piece { animation: piece-place 3s ease-in-out both; }
-@keyframes piece-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 100% { transform: translateY(0); } }
-@keyframes hand-place { 0% { transform: translateY(-520px); opacity: 1; } 48% { transform: translateY(-8px); opacity: 1; } 56%, 72% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-560px); opacity: 0; } }
+@keyframes piece-place { 0% { transform: translate(-460px, -420px); } 48% { transform: translate(-6px, -8px); } 56%, 100% { transform: translate(0, 0); } }
+@keyframes hand-place { 0% { transform: translate(-460px, -420px); opacity: 1; } 48% { transform: translate(-6px, -8px); opacity: 1; } 56%, 72% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(-500px, -460px); opacity: 0; } }
 
 /* Panning the map: drag or wheel; smooth except while dragging. */
 .world { cursor: grab; touch-action: none; user-select: none; }
@@ -496,3 +493,18 @@ h3 { font-size: 12px; font-weight: 400; }
   animation: fog-side 14s steps(96) infinite; }
 @keyframes fog-down { from { background-position: 0 0; } to { background-position: 0 384px; } }
 @keyframes fog-side { from { background-position: 0 0; } to { background-position: -384px 0; } }
+
+/* Sea of clouds over the fogged part of the board: billows slowly rolling,
+   and clouds pouring over the front edge like a waterfall. */
+.cloud img { display: block; image-rendering: pixelated; animation-name: cloud-roll; animation-timing-function: steps(10); animation-iteration-count: infinite; animation-direction: alternate; }
+.cloud.spill img { animation-name: cloud-spill; animation-timing-function: linear; animation-direction: normal; }
+@keyframes cloud-roll { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(6px, -4px) scale(1.04); } 100% { transform: translate(-4px, 2px) scale(.98); } }
+@keyframes cloud-spill { 0% { transform: translateY(-24px) scale(.9); opacity: 0; } 15% { opacity: 1; } 55% { transform: translateY(70px) scale(1.05); opacity: .95; } 100% { transform: translateY(200px) scale(1.25); opacity: 0; } }
+
+/* The board fills the whole window behind the side panel; the panel floats
+   over it, half see-through, and fades further while the board is dragged. */
+.map-scene .world { position: fixed; inset: 0; width: auto; height: auto; margin: 0; z-index: 0; }
+.map-scene .side { position: relative; z-index: 3; transition: opacity .3s; }
+.map-scene .side .box { background: #0c0a10b8; backdrop-filter: blur(2px); }
+.map-scene:has(.world.dragging) .side { opacity: .25; }
+.map-scene .notice { position: relative; z-index: 4; }
