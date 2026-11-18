@@ -170,6 +170,8 @@ pub struct Game {
     pub walking: RwSignal<Option<usize>>,
     pub title_page: RwSignal<TitlePage>,
     pub cover: RwSignal<Cover>,
+    /// Map legend shown (kept across screens).
+    pub legend_open: RwSignal<bool>,
     finishing: RwSignal<bool>,
 }
 
@@ -186,6 +188,7 @@ impl Game {
             walking: RwSignal::new(None),
             title_page: RwSignal::new(TitlePage::Start),
             cover: RwSignal::new(Cover::Off),
+            legend_open: RwSignal::new(false),
             finishing: RwSignal::new(false),
         }
     }

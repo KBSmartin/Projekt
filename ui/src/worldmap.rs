@@ -10,7 +10,7 @@ use leptos::prelude::*;
 /// How many rows beyond the current one are visible.
 const SIGHT: i32 = 2;
 /// Width of the plane in percent of the view; the camera follows the hero.
-const SPAN: f64 = 230.0;
+const SPAN: f64 = 320.0;
 /// Where the hero stands before the first step.
 const START: (f64, f64) = (3.5, 58.0);
 
@@ -191,7 +191,7 @@ fn themes(region: &str) -> &'static [Theme] {
 
 /// Plane percentages are stretched (the plane is much wider than deep); this
 /// scales x so distances are roughly even on screen.
-const XS: f64 = 3.0;
+const XS: f64 = 3.8;
 
 /// Distance from point p to the segment a-b, in the evened-out scale.
 fn seg_dist(p: Pt, a: Pt, b: Pt) -> f64 {
@@ -365,7 +365,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 ));
             }
         }
-        x += 1.9;
+        x += 1.5;
     }
     // Draw back to front, so nearer sprites cover farther ones.
     uprights.sort_by(|a, b| a.1.total_cmp(&b.1));
@@ -494,7 +494,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 spots.push((x + unit(h) * 2.5, y, 0.8 + (unit(mix(h)) + 1.0) * 0.35));
                 y += 18.0 + (unit(mix(h ^ 3)) + 1.0) * 5.0;
             }
-            x += 11.0;
+            x += 8.0;
         }
         let puffs = spots
             .into_iter()
@@ -559,6 +559,8 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                     "background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%;left:{cam:.2}%",
                 )
             >
+                <i class="bside l"></i>
+                <i class="bside r"></i>
                 {flats}
                 <svg class="trails" viewBox="0 0 100 100" preserveAspectRatio="none">{paths}</svg>
                 {nodes}
@@ -566,7 +568,16 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 {hero_view}
                 {fog}
             </div>
-            <div class="legend">{legend}</div>
+            <div class="legendbox">
+                <button
+                    class="btn sm ghost"
+                    aria-expanded=move || game.legend_open.get().to_string()
+                    on:click=move |_| game.legend_open.update(|o| *o = !*o)
+                >
+                    {move || if game.legend_open.get() { "Legende ▴" } else { "Legende ▾" }}
+                </button>
+                <div class="legend" class:open=move || game.legend_open.get()>{legend}</div>
+            </div>
         </div>
     }
     .into_any()
