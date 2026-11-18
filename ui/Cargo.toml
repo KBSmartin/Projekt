@@ -10,4 +10,4 @@ engine.workspace = true
 leptos.workspace = true
 console_error_panic_hook.workspace = true
 js-sys = "0.3.107"
-web-sys = { version = "0.3.107", features = ["DomRect", "Element"] }
+web-sys = { version = "0.3.107", features = ["DomRect", "Element", "HtmlAudioElement", "HtmlMediaElement", "Storage", "Window"] }

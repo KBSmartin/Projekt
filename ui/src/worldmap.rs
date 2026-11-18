@@ -541,58 +541,11 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         }
     });
 
-    // --- Fog: a flat layer with a soft edge and puffs standing along it.
+    // --- Fog: a flat layer on the board with a soft edge towards the open part.
     let fog = fog_x.map(|fx| {
         let left = fx - 2.0;
-        // A wall of puffs along the soft edge, then loose banks over the
-        // fog, all kept on the board.
-        let mut spots: Vec<(f64, f64, f64)> = (0..10)
-            .map(|i| {
-                (
-                    fx + 0.8 + unit(mix(salt ^ i)) * 1.0,
-                    6.0 + i as f64 * 9.8,
-                    1.2,
-                )
-            })
-            .collect();
-        let mut h = mix(salt ^ 0xF06);
-        let mut x = fx + 6.0;
-        while x < 96.0 {
-            let mut y = 8.0 + (unit(h) + 1.0) * 4.0;
-            while y < 94.0 {
-                h = mix(h);
-                spots.push((x + unit(h) * 2.0, y, 0.8 + (unit(mix(h)) + 1.0) * 0.3));
-                y += 18.0 + (unit(mix(h ^ 3)) + 1.0) * 5.0;
-            }
-            x += 8.0;
-        }
-        let puffs = spots
-            .into_iter()
-            .enumerate()
-            .map(|(i, (x, y, s))| {
-                standing(
-                    x,
-                    y,
-                    "puff",
-                    view! {
-                        <img
-                            src="assets/karte/nebelballen.png"
-                            alt=""
-                            style=format!(
-                                "width:{:.0}px;height:{:.0}px;animation-delay:-{}s",
-                                104.0 * s,
-                                40.0 * s,
-                                i * 7 % 5,
-                            )
-                        />
-                    }
-                    .into_any(),
-                )
-            })
-            .collect_view();
         view! {
             <div class="fogwar" style=format!("left:{left:.2}%")></div>
-            {puffs}
         }
     });
 

@@ -4,7 +4,6 @@
 #   boden_<region>.png     top-down ground per region (forest, desert, fortress)
 #   deko_<name>.png        upright decoration sprites (trees, rocks, ...)
 #   nebel.png              seamless fog texture
-#   nebelballen.png        fog puff sprite
 # Also writes uebersicht.png next to this script. Deterministic.
 param([string]$Out = (Join-Path $PSScriptRoot '..\..\ui\assets\karte'))
 $ErrorActionPreference = 'Stop'
@@ -163,9 +162,6 @@ for ($y = 0; $y -lt $fw; $y++) { for ($x = 0; $x -lt $fw; $x++) {
 } }
 Save $fog 'nebel'
 
-Save (GridBmp @(
-    '.......gggg.............', '....gggllllgg...gggg....', '..ggllllllllgggglllllg..', '.gllllwwllllllllllwwllg.',
-    'glllwwwwlllllllllwwwlllg', 'gllllllllllllllllllllllg', '.ggllllllggggglllllllgg.', '...gggggg.....ggggggg...') -pad 1) 'nebelballen'
 
 # ---------- overview ----------
 $files = Get-ChildItem $Out -Filter *.png | Sort-Object Name

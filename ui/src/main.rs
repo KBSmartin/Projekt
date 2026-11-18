@@ -5,9 +5,12 @@
 
 #[cfg(debug_assertions)]
 mod debug;
+mod sound;
 mod text;
 mod views;
 mod worldmap;
+
+use sound::Sfx;
 
 use engine::{ActionError, GameData, Phase, Run};
 use leptos::prelude::*;
@@ -145,6 +148,33 @@ fn screen_kind(run: Option<&Run>) -> u8 {
     }
 }
 
+/// Sounds for what an action changed: cards played, damage, block, healing
+/// and gold. At most one of each, so a big turn does not turn into noise.
+fn cues(old: &Run, new: &Run) -> Vec<Sfx> {
+    let mut out = Vec::new();
+    if let (Phase::Combat(a), Phase::Combat(b)) = (&old.phase, &new.phase) {
+        if b.hand.len() < a.hand.len() {
+            out.push(Sfx::Karte);
+        }
+        let foes = |c: &engine::Combat| c.enemies.iter().map(|e| e.hp.max(0)).sum::<i32>();
+        if foes(b) < foes(a) || b.player.hp < a.player.hp {
+            out.push(Sfx::Treffer);
+        }
+        if b.player.block > a.player.block {
+            out.push(Sfx::Block);
+        }
+        if b.player.hp > a.player.hp {
+            out.push(Sfx::Heilung);
+        }
+    } else if vitals(new).0 > vitals(old).0 {
+        out.push(Sfx::Heilung);
+    }
+    if new.gold != old.gold {
+        out.push(Sfx::Muenze);
+    }
+    out
+}
+
 /// Player HP and poison, inside a fight from the fight itself.
 fn vitals(run: &Run) -> (i32, u32) {
     match &run.phase {
@@ -218,6 +248,7 @@ impl Game {
             f();
             return;
         }
+        sound::play(Sfx::Wisch);
         self.cover.set(Cover::Closing);
         set_timeout(
             move || {
@@ -238,6 +269,9 @@ impl Game {
         self.map_pan.set(0.0);
         self.placing.set(true);
         self.act(move |r, _| r.choose_start(index));
+        // Lifted now, the tock when the hand sets the piece down.
+        sound::play(Sfx::Heben);
+        set_timeout(|| sound::play(Sfx::Setzen), PLACE_PIECE * 54 / 100);
         set_timeout(move || self.placing.set(false), PLACE_PIECE);
     }
 
@@ -253,9 +287,11 @@ impl Game {
             return;
         }
         self.map_pan.set(0.0);
+        sound::play(Sfx::Heben);
         self.walking.set(Some(id));
         set_timeout(
             move || {
+                sound::play(Sfx::Setzen);
                 self.walking.set(None);
                 self.act(move |r, d| r.choose_node(d, id));
             },
@@ -354,7 +390,13 @@ impl Game {
         let apply = move || {
             let before = self.vitals();
             let was_shop = self.in_shop();
+            let heard = self
+                .run
+                .with_untracked(|old| old.as_ref().map(|o| cues(o, &next)));
             self.run.set(Some(next));
+            for cue in heard.into_iter().flatten() {
+                sound::play(cue);
+            }
             self.react(before);
             if !was_shop && self.in_shop() {
                 self.greet();
@@ -456,10 +498,32 @@ fn App() -> impl IntoView {
     let debug = debug::panel(game);
     #[cfg(not(debug_assertions))]
     let debug = ();
+    // Every button clicks (disabled buttons get no click events at all).
+    let on_click = |e: leptos::ev::MouseEvent| {
+        let hit = event_target::<web_sys::Element>(&e)
+            .closest("button")
+            .ok()
+            .flatten();
+        if hit.is_some() {
+            sound::play(Sfx::Klick);
+        }
+    };
+    let muted = RwSignal::new(sound::muted());
     view! {
-        <div class="root">
+        <div class="root" on:click=on_click>
             {move || views::screen(game)}
             {debug}
+            <button
+                class="mute"
+                title=move || if muted.get() { "Ton an" } else { "Ton aus" }
+                aria-label=move || if muted.get() { "Ton an" } else { "Ton aus" }
+                on:click=move |_| {
+                    sound::set_muted(!muted.get_untracked());
+                    muted.set(sound::muted());
+                }
+            >
+                {move || if muted.get() { "🔇" } else { "🔊" }}
+            </button>
             {move || views::wipe(game.cover.get())}
         </div>
     }

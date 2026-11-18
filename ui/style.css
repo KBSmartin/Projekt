@@ -489,9 +489,11 @@ h3 { font-size: 12px; font-weight: 400; }
 /* Only when the board lies under the panel does it turn slightly see-through. */
 .map-scene:has(.world.under-hud) .side { opacity: .82; }
 .map-scene .notice { position: relative; z-index: 4; }
-.puff img { animation: puff-bob 3s steps(3) infinite alternate; opacity: .95; }
-@keyframes puff-bob { to { transform: translateY(-6px) translateX(4px); } }
 /* Rounded board: the front and side faces stop short of the rounded corners. */
 .plane::after { left: 32px; right: 32px; }
 .bside { top: 32px; bottom: 32px; }
 .plane::before { border-radius: 64px; }
+
+/* Sound on/off, bottom right next to the debug toggle. */
+.mute { position: fixed; z-index: 900; right: 14px; bottom: 54px; width: 36px; height: 36px; padding: 0; font-size: 16px; line-height: 1; background: #0c0a10d0; border: 2px solid var(--line); box-shadow: 3px 3px 0 #000; cursor: pointer; }
+.mute:hover { background: #1c1824; }
