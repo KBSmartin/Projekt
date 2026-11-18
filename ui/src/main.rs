@@ -348,6 +348,7 @@ impl Game {
     pub fn start_run_with_seed(self, character: &str, seed: u64) {
         match Run::new(data(), character, seed) {
             Ok(run) => self.wipe(move || {
+                sound::want_music(false);
                 self.selected.set(None);
                 self.deck_open.set(false);
                 self.play(PortraitAnim::Idle);
@@ -361,6 +362,7 @@ impl Game {
         self.wipe(move || {
             self.title_page.set(TitlePage::Start);
             self.run.set(None);
+            sound::want_music(true);
         });
     }
 
@@ -498,8 +500,10 @@ fn App() -> impl IntoView {
     let debug = debug::panel(game);
     #[cfg(not(debug_assertions))]
     let debug = ();
-    // Every button clicks (disabled buttons get no click events at all).
+    // Every button clicks (disabled buttons get no click events at all). The
+    // first click also starts the title music: browsers block audio before it.
     let on_click = |e: leptos::ev::MouseEvent| {
+        sound::music_resume();
         let hit = event_target::<web_sys::Element>(&e)
             .closest("button")
             .ok()

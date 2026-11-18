@@ -71,6 +71,7 @@ pub fn muted() -> bool {
 
 pub fn set_muted(on: bool) {
     MUTED.with(|c| c.set(on));
+    music_mute(on);
     // Browser storage may be unavailable (private window); muting then lasts
     // for this visit only.
     if let Some(s) = storage() {
@@ -86,5 +87,82 @@ pub fn play(sfx: Sfx) {
     if let Ok(audio) = HtmlAudioElement::new_with_src(&format!("assets/sound/{}.wav", sfx.file())) {
         audio.set_volume(sfx.volume());
         let _ = audio.play();
+    }
+}
+
+// ---------- title music ----------
+
+thread_local! {
+    static MUSIC: std::cell::RefCell<Option<HtmlAudioElement>> = const { std::cell::RefCell::new(None) };
+    /// The title screens want music (it may still wait for the first click,
+    /// browsers only start audio after the player has interacted).
+    static WANT_MUSIC: Cell<bool> = const { Cell::new(true) };
+}
+
+const MUSIC_VOLUME: f64 = 0.35;
+
+fn music() -> Option<HtmlAudioElement> {
+    MUSIC.with(|m| {
+        let mut m = m.borrow_mut();
+        if m.is_none() {
+            let audio = HtmlAudioElement::new_with_src("assets/sound/titel.wav").ok()?;
+            audio.set_loop(true);
+            audio.set_volume(0.0);
+            *m = Some(audio);
+        }
+        m.clone()
+    })
+}
+
+/// Fades the music volume in small steps; optionally pauses at the end.
+fn fade(audio: &HtmlAudioElement, to: f64, pause: bool) {
+    const STEPS: u64 = 16;
+    let from = audio.volume();
+    for k in 1..=STEPS {
+        let a = audio.clone();
+        leptos::prelude::set_timeout(
+            move || {
+                a.set_volume((from + (to - from) * k as f64 / STEPS as f64).clamp(0.0, 1.0));
+                if k == STEPS && pause {
+                    let _ = a.pause();
+                }
+            },
+            std::time::Duration::from_millis(k * 75),
+        );
+    }
+}
+
+/// Starts (or keeps) the title music when it is wanted and sound is on.
+pub fn music_resume() {
+    if muted() || !WANT_MUSIC.with(Cell::get) {
+        return;
+    }
+    if let Some(audio) = music()
+        && audio.paused()
+    {
+        let _ = audio.play();
+        fade(&audio, MUSIC_VOLUME, false);
+    }
+}
+
+/// The title screens are shown (true) or a run starts (false).
+pub fn want_music(on: bool) {
+    WANT_MUSIC.with(|w| w.set(on));
+    if on {
+        music_resume();
+    } else if let Some(audio) = MUSIC.with(|m| m.borrow().clone())
+        && !audio.paused()
+    {
+        fade(&audio, 0.0, true);
+    }
+}
+
+fn music_mute(on: bool) {
+    if on {
+        if let Some(audio) = MUSIC.with(|m| m.borrow().clone()) {
+            let _ = audio.pause();
+        }
+    } else {
+        music_resume();
     }
 }
