@@ -172,6 +172,8 @@ pub struct Run {
     /// Index into [`GameData::regions`].
     pub region: usize,
     pub map: Map,
+    /// Chosen start point of the current region (index into `Map::starts`).
+    pub start: Option<usize>,
     pub current: Option<usize>,
     pub visited: Vec<usize>,
     pub stats: RunStats,
@@ -197,6 +199,7 @@ impl Run {
             relics: Vec::new(),
             region: 0,
             map,
+            start: None,
             current: None,
             visited: Vec::new(),
             stats: RunStats::default(),
@@ -209,11 +212,14 @@ impl Run {
         matches!(self.phase, Phase::Victory | Phase::Defeat)
     }
 
-    /// Node ids the player can move to now.
+    /// Node ids the player can move to now. Before the first step these are
+    /// the nodes of the chosen start point, or the whole first row while no
+    /// start point is chosen (bots skip the choice).
     pub fn available_nodes(&self) -> Vec<usize> {
-        match self.current {
-            None => self.map.rows[0].clone(),
-            Some(id) => self.map.nodes[id].next.clone(),
+        match (self.current, self.start) {
+            (Some(id), _) => self.map.nodes[id].next.clone(),
+            (None, Some(s)) => self.map.starts[s].clone(),
+            (None, None) => self.map.rows[0].clone(),
         }
     }
 
@@ -276,6 +282,19 @@ impl Run {
         Ok(())
     }
 
+    /// Picks one of the three start points of the region (new, not in the
+    /// prototype). Only before the first step and only once.
+    pub fn choose_start(&mut self, index: usize) -> ActionResult {
+        if self.phase != Phase::Map {
+            return Err(ActionError::WrongPhase);
+        }
+        if self.current.is_some() || self.start.is_some() || index >= self.map.starts.len() {
+            return Err(ActionError::NotAllowed);
+        }
+        self.start = Some(index);
+        Ok(())
+    }
+
     /// Moves to a map node and opens its screen (prototype `goNode`).
     pub fn choose_node(&mut self, data: &GameData, id: usize) -> ActionResult {
         if self.phase != Phase::Map {
@@ -283,6 +302,9 @@ impl Run {
         }
         if !self.available_nodes().contains(&id) {
             return Err(ActionError::NotAllowed);
+        }
+        if self.start.is_none() {
+            self.start = self.map.starts.iter().position(|s| s.contains(&id));
         }
         self.current = Some(id);
         self.visited.push(id);
@@ -506,6 +528,7 @@ impl Run {
         }
         self.region += 1;
         self.map = Map::generate(&mut self.rng);
+        self.start = None;
         self.current = None;
         self.visited.clear();
         self.phase = Phase::RegionIntro;

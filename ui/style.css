@@ -459,3 +459,21 @@ h3 { font-size: 12px; font-weight: 400; }
 .world .legend.open { display: grid; gap: 8px; }
 .world .legend span { display: flex; align-items: center; gap: 8px; }
 .world .legend img { width: 16px; height: 16px; image-rendering: pixelated; }
+
+/* Start points: three numbered white fields left of the first row. */
+.spot.k-start { --fc: #c8c0b0; width: 58px; height: 58px; border-color: #f4ecd8; }
+.spot.k-start b { font-size: 20px; color: #2a1c12; text-shadow: 1px 1px 0 #fff8; }
+.spot.k-start.vis { filter: saturate(.2) brightness(.55); }
+
+/* A hand lowers the piece onto the chosen start point and pulls back up. */
+.hero .hand { display: none; position: absolute; left: 50%; bottom: 104px; width: 72px; height: 84px; margin-left: -34px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 #0006); }
+.hero.placing .hand { display: block; animation: hand-place 1.7s ease-in-out both; }
+.hero.placing .piece { animation: piece-place 1.7s ease-in-out both; }
+@keyframes piece-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 100% { transform: translateY(0); } }
+@keyframes hand-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 68% { transform: translateY(0); } 100% { transform: translateY(-560px); opacity: 0; } }
+
+/* Panning the map: drag or wheel; smooth except while dragging. */
+.world { cursor: grab; touch-action: none; user-select: none; }
+.world.dragging { cursor: grabbing; }
+.plane { transition: left .25s ease-out; }
+.world.dragging .plane { transition: none; }

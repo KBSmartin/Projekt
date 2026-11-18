@@ -82,6 +82,14 @@ $deko = [ordered]@{
 }
 foreach ($k in $deko.Keys) { Save (GridBmp $deko[$k] -Outline -pad 1) "deko_$k" }
 
+# ---------- the hand that sets the piece on the board (seen from the side, reaching down) ----------
+Save (GridBmp @(
+    '...dddddddddd...', '...d22222222d...', '...d22222222d...', '...dddddddddd...',
+    '....eeeeeeee....', '....eeeeeeeea...', '...eeeeeeeeeaa..', '...eeeeeeeeeaa..',
+    '...eeeeeeeeeaa..', '..eeaeeaeeaeaa..', '..ee.ee.ee.aa...', '..ea.ea.ea.ae...',
+    '..aa.aa.aa..e...', '.ee.........e...', '.ee.........ea..', '..ee.......ea...',
+    '...ee.....ea....', '....ea...ea.....', '.....a...a......') -Outline -pad 1) 'hand'
+
 # ---------- flat decals (lie on the board) ----------
 # Ellipse of $fill with an $edge ring and a highlight streak, optional extra dots.
 function FlatGrid([int]$w, [int]$h, [char]$fill, [char]$edge, [char]$lite, [string]$dots, [int]$seed) {

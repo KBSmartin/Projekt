@@ -788,7 +788,10 @@ fn bleed_hurts_the_enemy_after_each_of_its_attacks() {
     c.end_turn(&cards(), &mut rng).unwrap();
     // Attacked once: loses 5, then the bleeding drops to 4.
     assert_eq!((c.enemies[0].hp, c.enemies[0].status.bleed), (32, 4));
-    assert!(c.log.contains(&LogEntry::Bleed { enemy: 0, damage: 5 }));
+    assert!(c.log.contains(&LogEntry::Bleed {
+        enemy: 0,
+        damage: 5
+    }));
 }
 
 #[test]

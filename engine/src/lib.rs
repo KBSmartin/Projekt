@@ -23,7 +23,7 @@ pub use content::{
     RelicInfo,
 };
 pub use enemy::{EnemyDb, EnemyDef, EnemyLoadError, Move};
-pub use map::{MAP_COLS, MAP_ROWS, Map, MapNode, NodeKind};
+pub use map::{MAP_COLS, MAP_ROWS, Map, MapNode, NodeKind, START_LANES};
 pub use relic::Relic;
 pub use rng::GameRng;
 pub use run::{

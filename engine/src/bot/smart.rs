@@ -185,7 +185,9 @@ fn evaluate(combat: &Combat, data: &GameData) -> f64 {
         .iter()
         .filter(|e| !e.dead)
         .map(|e| {
-            f64::from(e.hp) - poison_left(e.status.poison, e.hp) - poison_left(e.status.bleed, e.hp) * 0.6
+            f64::from(e.hp)
+                - poison_left(e.status.poison, e.hp)
+                - poison_left(e.status.bleed, e.hp) * 0.6
                 + f64::from(e.block) * 0.3
         })
         .sum();

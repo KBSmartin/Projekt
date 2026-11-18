@@ -4,7 +4,7 @@
 //! the whole region in advance. Positions are percentages of the plane.
 
 use crate::{Game, data};
-use engine::{MAP_COLS, MAP_ROWS, MapNode, NodeKind, Run};
+use engine::{MAP_COLS, MAP_ROWS, MapNode, NodeKind, Run, START_LANES};
 use leptos::prelude::*;
 
 /// How many rows beyond the current one are visible.
@@ -227,19 +227,46 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     let fog_x =
         (sight < MAP_ROWS as i32).then(|| 12.0 + (sight as f64 + 0.5) * 80.0 / MAP_ROWS as f64);
 
-    let available = run.available_nodes();
-    let here = run.current.map_or(START, pos);
+    // Before a start point is chosen only the start points can be clicked.
+    let choosing = run.current.is_none() && run.start.is_none();
+    let available = if choosing {
+        Vec::new()
+    } else {
+        run.available_nodes()
+    };
+    // The three start points left of the first row, one per lane.
+    let start_pos = |i: usize| {
+        let lane = START_LANES[i];
+        (START.0, 24.0 + lane as f64 * 68.0 / (MAP_COLS - 1) as f64)
+    };
+    let starts: Vec<Pt> = (0..START_LANES.len()).map(start_pos).collect();
+    let here = match (run.current, run.start) {
+        (Some(id), _) => pos(id),
+        (None, Some(s)) => start_pos(s),
+        (None, None) => START,
+    };
     // Camera: the hero stands about a fifth into the view, without leaving the plane.
     let cam = (16.0 - here.0 * SPAN / 100.0).clamp(98.0 - SPAN, 2.0);
 
     // --- Paths: every link out of a visible node (links into the fog vanish in it).
     let mut links: Vec<(Pt, Pt, &'static str)> = Vec::new();
-    if run.current.is_none() {
-        for &b in &map.rows[0] {
-            links.push((START, pos(b), "open"));
+    for (i, s) in map.starts.iter().enumerate() {
+        for &b in s {
+            let class = if run.start == Some(i) {
+                if run.current.is_none() {
+                    "open"
+                } else if run.visited.first() == Some(&b) {
+                    "done"
+                } else {
+                    "plain"
+                }
+            } else if run.start.is_none() {
+                "open"
+            } else {
+                "plain"
+            };
+            links.push((start_pos(i), pos(b), class));
         }
-    } else if let Some(first) = run.visited.first() {
-        links.push((START, pos(*first), "done"));
     }
     for n in map.nodes.iter().filter(|n| seen(n)) {
         for &b in &n.next {
@@ -275,7 +302,13 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         .iter()
         .flat_map(|n| n.next.iter().map(move |&b| (n.id, b)))
         .map(|(a, b)| (pos(a), pos(b)))
-        .chain(map.rows[0].iter().map(|&b| (START, pos(b))))
+        .chain(
+            map.starts
+                .iter()
+                .enumerate()
+                .flat_map(|(i, s)| s.iter().map(move |&b| (i, b)))
+                .map(|(i, b)| (start_pos(i), pos(b))),
+        )
         .collect();
     let free = |x: f64, y: f64, room: f64| {
         (2.0..=98.0).contains(&x)
@@ -285,7 +318,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 .nodes
                 .iter()
                 .map(|n| pos(n.id))
-                .chain(std::iter::once(START))
+                .chain(starts.iter().copied())
                 .all(|p| ((p.0 - x) * XS).hypot(p.1 - y) > 9.0 + room)
             && all_links
                 .iter()
@@ -401,6 +434,39 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         })
         .collect_view();
 
+    // --- Start points: numbered fields left of the first row. Before the first
+    // choice they are the only thing to click.
+    let start_spots = starts
+        .iter()
+        .enumerate()
+        .map(|(i, &(x, y))| {
+            let state = if choosing {
+                " av"
+            } else if run.start == Some(i) {
+                " cur"
+            } else {
+                " vis"
+            };
+            let label = format!("Startpunkt {}", i + 1);
+            view! {
+                <button
+                    class=format!("spot k-start{state}")
+                    style=format!("left:{x:.2}%;top:{y:.2}%")
+                    title=label.clone()
+                    aria-label=label
+                    disabled=!choosing
+                    on:click=move |_| {
+                        if !game.map_dragged.get_untracked() {
+                            game.place_start(i);
+                        }
+                    }
+                >
+                    <b>{i + 1}</b>
+                </button>
+            }
+        })
+        .collect_view();
+
     // --- Nodes: round fields painted on the board, the icon on top.
     let walking = game.walking;
     let nodes = map
@@ -430,7 +496,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                     aria-label=name
                     disabled=!av
                     on:click=move |_| {
-                        if walking.get_untracked().is_none() {
+                        if walking.get_untracked().is_none() && !game.map_dragged.get_untracked() {
                             game.walk_to(id);
                         }
                     }
@@ -451,16 +517,20 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             .unwrap_or(here)
     };
     let hero_at2 = hero_at.clone();
-    let hero_view = view! {
-        <div
-            class="bb hero"
-            class:walk=move || walking.get().is_some()
-            style:left=move || format!("{:.2}%", hero_at().0)
-            style:top=move || format!("{:.2}%", hero_at2().1 + 1.5)
-        >
-            <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
-        </div>
-    };
+    let hero_view = (!choosing).then(|| {
+        view! {
+            <div
+                class="bb hero"
+                class:walk=move || walking.get().is_some()
+                class:placing=move || game.placing.get()
+                style:left=move || format!("{:.2}%", hero_at().0)
+                style:top=move || format!("{:.2}%", hero_at2().1 + 1.5)
+            >
+                <img class="hand" src="assets/karte/hand.png" alt="" />
+                <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
+            </div>
+        }
+    });
 
     // --- Fog: a flat layer with a ragged edge and puffs standing along it.
     let fog = fog_x.map(|fx| {
@@ -545,8 +615,53 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     })
     .collect_view();
 
+    // --- Panning: drag with the mouse or use the wheel; a move recentres.
+    let pan = game.map_pan;
+    let dragged = game.map_dragged;
+    let drag = StoredValue::new(None::<(f64, f64)>);
+    let view_w = || {
+        window()
+            .inner_width()
+            .ok()
+            .and_then(|w| w.as_f64())
+            .unwrap_or(1280.0)
+            - 190.0
+    };
+    let clamp_pan = move |p: f64| p.clamp(98.0 - SPAN - cam, 2.0 - cam);
+    let on_down = move |e: leptos::ev::PointerEvent| {
+        if e.button() == 0 {
+            drag.set_value(Some((e.client_x() as f64, pan.get_untracked())));
+            dragged.set(false);
+        }
+    };
+    let on_move = move |e: leptos::ev::PointerEvent| {
+        if let Some((x0, p0)) = drag.get_value() {
+            let dx = e.client_x() as f64 - x0;
+            if dx.abs() > 5.0 {
+                dragged.set(true);
+            }
+            if dragged.get_untracked() {
+                pan.set(clamp_pan(p0 + dx / view_w() * 100.0));
+            }
+        }
+    };
+    let on_up = move |_| drag.set_value(None);
+    let on_wheel = move |e: leptos::ev::WheelEvent| {
+        e.prevent_default();
+        let d = e.delta_y() + e.delta_x();
+        pan.update(|p| *p = clamp_pan(*p - d / view_w() * 60.0));
+    };
+
     view! {
-        <div class=format!("world w-{rid}")>
+        <div
+            class=format!("world w-{rid}")
+            class:dragging=move || dragged.get() && drag.get_value().is_some()
+            on:pointerdown=on_down
+            on:pointermove=on_move
+            on:pointerup=on_up
+            on:pointerleave=on_up
+            on:wheel=on_wheel
+        >
             <div class="reg">
                 {region.name.clone()}
                 <small>
@@ -555,14 +670,14 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             </div>
             <div
                 class="plane"
-                style=format!(
-                    "background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%;left:{cam:.2}%",
-                )
+                style=format!("background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%")
+                style:left=move || format!("{:.2}%", cam + pan.get())
             >
                 <i class="bside l"></i>
                 <i class="bside r"></i>
                 {flats}
                 <svg class="trails" viewBox="0 0 100 100" preserveAspectRatio="none">{paths}</svg>
+                {start_spots}
                 {nodes}
                 {decor}
                 {hero_view}

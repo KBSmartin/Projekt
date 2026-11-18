@@ -75,6 +75,27 @@ fn map_moves_follow_connections() {
 }
 
 #[test]
+fn a_start_point_limits_the_first_step() {
+    let d = data();
+    let mut r = run(&d, "warrior");
+    assert_eq!(r.choose_start(0), Err(ActionError::WrongPhase));
+    r.continue_from_intro().unwrap();
+    assert_eq!(r.choose_start(3), Err(ActionError::NotAllowed));
+    r.choose_start(2).unwrap();
+    assert_eq!(r.choose_start(1), Err(ActionError::NotAllowed), "only once");
+    assert_eq!(r.available_nodes(), r.map.starts[2]);
+    if let Some(&other) = r.map.rows[0]
+        .iter()
+        .find(|id| !r.map.starts[2].contains(id))
+    {
+        assert_eq!(r.choose_node(&d, other), Err(ActionError::NotAllowed));
+    }
+    let first = r.map.starts[2][0];
+    r.choose_node(&d, first).unwrap();
+    assert_eq!(r.start, Some(2));
+}
+
+#[test]
 fn first_fight_uses_easy_encounters_and_character_bonus() {
     let d = data();
     let r = in_first_fight(&d);

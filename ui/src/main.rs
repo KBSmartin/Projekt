@@ -88,6 +88,8 @@ impl MerchantAnim {
 const MERCHANT_GREET: Duration = Duration::from_millis(1200);
 /// How long the hero figure walks from one map node to the next (CSS matches).
 const MAP_WALK: Duration = Duration::from_millis(900);
+/// The hand lowering the piece onto the start point and pulling back (CSS matches).
+const PLACE_PIECE: Duration = Duration::from_millis(1700);
 /// The farewell grin plays and stays a moment before the map comes back.
 const MERCHANT_FAREWELL: Duration = Duration::from_millis(2200);
 
@@ -172,6 +174,12 @@ pub struct Game {
     pub cover: RwSignal<Cover>,
     /// Map legend shown (kept across screens).
     pub legend_open: RwSignal<bool>,
+    /// A hand is setting the piece onto the chosen start point.
+    pub placing: RwSignal<bool>,
+    /// Map view moved by the player (percent of the view width), and whether
+    /// the last press was a drag (then it is not a click on a field).
+    pub map_pan: RwSignal<f64>,
+    pub map_dragged: RwSignal<bool>,
     finishing: RwSignal<bool>,
 }
 
@@ -189,6 +197,9 @@ impl Game {
             title_page: RwSignal::new(TitlePage::Start),
             cover: RwSignal::new(Cover::Off),
             legend_open: RwSignal::new(false),
+            placing: RwSignal::new(false),
+            map_pan: RwSignal::new(0.0),
+            map_dragged: RwSignal::new(false),
             finishing: RwSignal::new(false),
         }
     }
@@ -212,6 +223,18 @@ impl Game {
         );
     }
 
+    /// Chooses a start point: a hand sets the piece onto it, then the first
+    /// fields can be chosen.
+    pub fn place_start(self, index: usize) {
+        if self.placing.get_untracked() {
+            return;
+        }
+        self.map_pan.set(0.0);
+        self.placing.set(true);
+        self.act(move |r, _| r.choose_start(index));
+        set_timeout(move || self.placing.set(false), PLACE_PIECE);
+    }
+
     /// Switches between start screen and character choice.
     pub fn show_title(self, page: TitlePage) {
         self.wipe(move || self.title_page.set(page));
@@ -220,9 +243,10 @@ impl Game {
     /// The hero figure walks over the map to the chosen node, then the run
     /// enters it.
     pub fn walk_to(self, id: usize) {
-        if self.walking.get_untracked().is_some() {
+        if self.walking.get_untracked().is_some() || self.placing.get_untracked() {
             return;
         }
+        self.map_pan.set(0.0);
         self.walking.set(Some(id));
         set_timeout(
             move || {

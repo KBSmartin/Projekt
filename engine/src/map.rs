@@ -5,6 +5,8 @@ use crate::rng::GameRng;
 /// Rows of regular nodes; the boss sits in an extra row above.
 pub const MAP_ROWS: usize = 8;
 pub const MAP_COLS: usize = 5;
+/// Lanes of the three start points left of the first row.
+pub const START_LANES: [usize; 3] = [0, 2, 4];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeKind {
@@ -31,6 +33,8 @@ pub struct Map {
     pub nodes: Vec<MapNode>,
     /// Node ids per row, `MAP_ROWS` regular rows plus the boss row.
     pub rows: Vec<Vec<usize>>,
+    /// For each start point (see [`START_LANES`]) the first-row nodes it leads to.
+    pub starts: Vec<Vec<usize>>,
 }
 
 impl Map {
@@ -40,7 +44,10 @@ impl Map {
         for r in 0..MAP_ROWS {
             // Fix: the prototype placed 3-4 nodes per row (2-3 in the last);
             // the board map reads better with 2-3 (2 in the last row).
-            let k = if r == MAP_ROWS - 1 {
+            // Three in the first row, one for each start point to aim at.
+            let k = if r == 0 {
+                3
+            } else if r == MAP_ROWS - 1 {
                 2
             } else {
                 rng.range(2, 3) as usize
@@ -149,7 +156,12 @@ impl Map {
             };
         }
 
-        let mut map = Self { nodes, rows };
+        let starts = start_links(&nodes, &rows[0]);
+        let mut map = Self {
+            nodes,
+            rows,
+            starts,
+        };
         map.force(NodeKind::Shop, 2, 5, rng);
         map.force(NodeKind::Elite, 3, 6, rng);
         map.force(NodeKind::Rest, 2, 5, rng);
@@ -188,6 +200,42 @@ impl Map {
     }
 }
 
+/// Links each start point to the first-row nodes in or next to its lane (or
+/// the nearest ones), and makes sure every first-row node can be reached.
+fn start_links(nodes: &[MapNode], first: &[usize]) -> Vec<Vec<usize>> {
+    let dist = |id: usize, lane: usize| nodes[id].col.abs_diff(lane);
+    let mut starts: Vec<Vec<usize>> = START_LANES
+        .iter()
+        .map(|&lane| {
+            let near: Vec<usize> = first
+                .iter()
+                .copied()
+                .filter(|&id| dist(id, lane) <= 1)
+                .collect();
+            if !near.is_empty() {
+                return near;
+            }
+            let m = first.iter().map(|&id| dist(id, lane)).min().unwrap_or(0);
+            first
+                .iter()
+                .copied()
+                .filter(|&id| dist(id, lane) == m)
+                .collect()
+        })
+        .collect();
+    for &id in first {
+        if !starts.iter().any(|s| s.contains(&id)) {
+            let (best, _) = START_LANES
+                .iter()
+                .enumerate()
+                .min_by_key(|&(_, &lane)| dist(id, lane))
+                .unwrap_or((0, &0));
+            starts[best].push(id);
+            starts[best].sort_unstable();
+        }
+    }
+    starts
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,12 +274,30 @@ mod tests {
     }
 
     #[test]
+    fn every_start_leads_on_and_reaches_the_first_row() {
+        for map in maps() {
+            assert_eq!(map.starts.len(), START_LANES.len());
+            for s in &map.starts {
+                assert!(!s.is_empty());
+                assert!(s.iter().all(|id| map.rows[0].contains(id)));
+            }
+            for id in &map.rows[0] {
+                assert!(
+                    map.starts.iter().any(|s| s.contains(id)),
+                    "node {id} unreachable"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn rows_stay_small() {
         for map in maps() {
-            for r in 0..MAP_ROWS {
-                let n = map.rows[r].len();
+            for (r, row) in map.rows.iter().take(MAP_ROWS).enumerate() {
+                let n = row.len();
                 assert!((2..=3).contains(&n), "row {r} has {n} nodes");
             }
+            assert_eq!(map.rows[0].len(), 3);
             assert_eq!(map.rows[MAP_ROWS - 1].len(), 2);
         }
     }
