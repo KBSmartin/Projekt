@@ -87,9 +87,9 @@ impl MerchantAnim {
 /// How long the greeting plays before the merchant goes back to idle.
 const MERCHANT_GREET: Duration = Duration::from_millis(1200);
 /// How long the hero figure walks from one map node to the next (CSS matches).
-const MAP_WALK: Duration = Duration::from_millis(900);
+const MAP_WALK: Duration = Duration::from_millis(1400);
 /// The hand lowering the piece onto the start point and pulling back (CSS matches).
-const PLACE_PIECE: Duration = Duration::from_millis(1700);
+const PLACE_PIECE: Duration = Duration::from_millis(3000);
 /// The farewell grin plays and stays a moment before the map comes back.
 const MERCHANT_FAREWELL: Duration = Duration::from_millis(2200);
 
@@ -127,7 +127,7 @@ pub enum Cover {
 }
 
 /// One half of the wipe (CSS matches: tile delays plus tile animation).
-const WIPE: Duration = Duration::from_millis(440);
+const WIPE: Duration = Duration::from_millis(820);
 
 /// Which screen a run state shows, to tell whether an action changes it.
 fn screen_kind(run: Option<&Run>) -> u8 {
@@ -180,6 +180,10 @@ pub struct Game {
     /// the last press was a drag (then it is not a click on a field).
     pub map_pan: RwSignal<f64>,
     pub map_dragged: RwSignal<bool>,
+    /// Map zoom from the mouse wheel and the vertical shift when zoomed in
+    /// (pixels); both kept across screens.
+    pub map_zoom: RwSignal<f64>,
+    pub map_pan_y: RwSignal<f64>,
     finishing: RwSignal<bool>,
 }
 
@@ -200,6 +204,8 @@ impl Game {
             placing: RwSignal::new(false),
             map_pan: RwSignal::new(0.0),
             map_dragged: RwSignal::new(false),
+            map_zoom: RwSignal::new(1.0),
+            map_pan_y: RwSignal::new(0.0),
             finishing: RwSignal::new(false),
         }
     }

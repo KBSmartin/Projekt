@@ -526,8 +526,8 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 style:left=move || format!("{:.2}%", hero_at().0)
                 style:top=move || format!("{:.2}%", hero_at2().1 + 1.5)
             >
-                <img class="hand" src="assets/karte/hand.png" alt="" />
                 <img class="piece" src=format!("assets/karte/figur_{hero}.png") alt="" />
+                <img class="hand" src="assets/karte/hand.png" alt="" />
             </div>
         }
     });
@@ -615,10 +615,13 @@ pub fn world(game: Game, run: &Run) -> AnyView {
     })
     .collect_view();
 
-    // --- Panning: drag with the mouse or use the wheel; a move recentres.
+    // --- Panning: drag with the mouse (sideways always, up and down when
+    // zoomed in); the wheel zooms. A move recentres sideways.
     let pan = game.map_pan;
+    let pan_y = game.map_pan_y;
+    let zoom = game.map_zoom;
     let dragged = game.map_dragged;
-    let drag = StoredValue::new(None::<(f64, f64)>);
+    let drag = StoredValue::new(None::<(f64, f64, f64, f64)>);
     let view_w = || {
         window()
             .inner_width()
@@ -628,28 +631,42 @@ pub fn world(game: Game, run: &Run) -> AnyView {
             - 190.0
     };
     let clamp_pan = move |p: f64| p.clamp(98.0 - SPAN - cam, 2.0 - cam);
+    // Zoomed in, the board may move up or down by as much as it grew.
+    let clamp_y = move |y: f64, z: f64| {
+        let room = (z - 1.0).max(0.0) * 420.0;
+        y.clamp(-room * 0.4, room)
+    };
     let on_down = move |e: leptos::ev::PointerEvent| {
         if e.button() == 0 {
-            drag.set_value(Some((e.client_x() as f64, pan.get_untracked())));
+            drag.set_value(Some((
+                e.client_x() as f64,
+                e.client_y() as f64,
+                pan.get_untracked(),
+                pan_y.get_untracked(),
+            )));
             dragged.set(false);
         }
     };
     let on_move = move |e: leptos::ev::PointerEvent| {
-        if let Some((x0, p0)) = drag.get_value() {
-            let dx = e.client_x() as f64 - x0;
-            if dx.abs() > 5.0 {
+        if let Some((x0, y0, p0, q0)) = drag.get_value() {
+            let (dx, dy) = (e.client_x() as f64 - x0, e.client_y() as f64 - y0);
+            if dx.hypot(dy) > 5.0 {
                 dragged.set(true);
             }
             if dragged.get_untracked() {
-                pan.set(clamp_pan(p0 + dx / view_w() * 100.0));
+                let z = zoom.get_untracked();
+                pan.set(clamp_pan(p0 + dx / view_w() * 100.0 / z));
+                pan_y.set(clamp_y(q0 + dy, z));
             }
         }
     };
     let on_up = move |_| drag.set_value(None);
     let on_wheel = move |e: leptos::ev::WheelEvent| {
         e.prevent_default();
-        let d = e.delta_y() + e.delta_x();
-        pan.update(|p| *p = clamp_pan(*p - d / view_w() * 60.0));
+        let d = e.delta_y();
+        zoom.update(|z| *z = (*z * (1.0 - d * 0.0012)).clamp(0.7, 1.8));
+        let z = zoom.get_untracked();
+        pan_y.update(|y| *y = clamp_y(*y, z));
     };
 
     view! {
@@ -669,6 +686,10 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 </small>
             </div>
             <div
+                class="zoom"
+                style:transform=move || format!("translateY({:.0}px) scale({:.3})", pan_y.get(), zoom.get())
+            >
+            <div
                 class="plane"
                 style=format!("background-image:url(assets/karte/boden_{rid}.png);width:{SPAN}%")
                 style:left=move || format!("{:.2}%", cam + pan.get())
@@ -682,6 +703,7 @@ pub fn world(game: Game, run: &Run) -> AnyView {
                 {decor}
                 {hero_view}
                 {fog}
+            </div>
             </div>
             <div class="legendbox">
                 <button

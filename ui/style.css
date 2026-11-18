@@ -418,9 +418,9 @@ h3 { font-size: 12px; font-weight: 400; }
 .spot.vis, .spot.cur { filter: saturate(.35) brightness(.75); }
 @keyframes field-glow { 50% { box-shadow: 0 0 0 3px #1a120a, 0 0 0 9px color-mix(in srgb, var(--acc) 60%, transparent), 0 7px 0 3px #3a2414, 0 12px 10px 3px #0008; } }
 
-.hero { z-index: 2; transition: left .9s ease-in-out, top .9s ease-in-out; }
+.hero { z-index: 2; transition: left 1.4s ease-in-out, top 1.4s ease-in-out; }
 .hero .piece { width: 96px; height: 128px; filter: drop-shadow(0 5px 0 #0008); }
-.hero.walk .piece { animation: piece-hop .9s ease-in-out; }
+.hero.walk .piece { animation: piece-hop 1.4s ease-in-out; }
 @keyframes piece-hop { 0% { transform: translateY(0); } 22% { transform: translateY(-34px); } 78% { transform: translateY(-34px); } 100% { transform: translateY(0); } }
 .flat { position: absolute; transform: translate(-50%, -50%) translateZ(1px); image-rendering: pixelated; pointer-events: none; }
 
@@ -440,8 +440,8 @@ h3 { font-size: 12px; font-weight: 400; }
 /* Pixel wipe between screens: rotated squares growing left to right. */
 .wipe { position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: repeat(14, 1fr); overflow: hidden; pointer-events: all; }
 .wipe i { background: #0a080c; transform: rotate(45deg) scale(0); }
-.wipe.closing i { animation: wipe-grow 300ms steps(5) forwards; animation-delay: var(--d); }
-.wipe.opening i { transform: rotate(45deg) scale(1.5); animation: wipe-shrink 300ms steps(5) forwards; animation-delay: var(--d); }
+.wipe.closing i { animation: wipe-grow 480ms steps(6) forwards; animation-delay: var(--d); }
+.wipe.opening i { transform: rotate(45deg) scale(1.5); animation: wipe-shrink 480ms steps(6) forwards; animation-delay: var(--d); }
 @keyframes wipe-grow { to { transform: rotate(45deg) scale(1.5); } }
 @keyframes wipe-shrink { to { transform: rotate(45deg) scale(0); } }
 
@@ -466,9 +466,9 @@ h3 { font-size: 12px; font-weight: 400; }
 .spot.k-start.vis { filter: saturate(.2) brightness(.55); }
 
 /* A hand lowers the piece onto the chosen start point and pulls back up. */
-.hero .hand { display: none; position: absolute; left: 50%; bottom: 104px; width: 72px; height: 84px; margin-left: -34px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 #0006); }
-.hero.placing .hand { display: block; animation: hand-place 1.7s ease-in-out both; }
-.hero.placing .piece { animation: piece-place 1.7s ease-in-out both; }
+.hero .hand { display: none; position: absolute; left: -32px; top: -77px; width: 160px; height: 160px; image-rendering: pixelated; filter: drop-shadow(0 6px 0 #0006); }
+.hero.placing .hand { display: block; animation: hand-place 3s ease-in-out both; }
+.hero.placing .piece { animation: piece-place 3s ease-in-out both; }
 @keyframes piece-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 100% { transform: translateY(0); } }
 @keyframes hand-place { 0% { transform: translateY(-520px); } 48% { transform: translateY(-8px); } 56%, 68% { transform: translateY(0); } 100% { transform: translateY(-560px); opacity: 0; } }
 
@@ -477,3 +477,6 @@ h3 { font-size: 12px; font-weight: 400; }
 .world.dragging { cursor: grabbing; }
 .plane { transition: left .25s ease-out; }
 .world.dragging .plane { transition: none; }
+/* Wheel zoom: the whole board scales on screen, 3D stays intact. */
+.zoom { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 70%; transition: transform .2s ease-out; }
+.world.dragging .zoom { transition: none; }

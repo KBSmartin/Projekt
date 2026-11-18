@@ -165,7 +165,7 @@ pub fn wipe(cover: crate::Cover) -> AnyView {
     let tiles = (0..ROWS * COLS)
         .map(|i| {
             let (c, r) = (i % COLS, i / COLS);
-            view! { <i style=format!("--d:{}ms", c * 6 + r * 3)></i> }
+            view! { <i style=format!("--d:{}ms", c * 11 + r * 6)></i> }
         })
         .collect_view();
     view! { <div class=class aria-hidden="true">{tiles}</div> }.into_any()
