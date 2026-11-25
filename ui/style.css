@@ -102,6 +102,14 @@ svg.map { width: 100%; height: auto; display: block; }
 .intent { min-height: 30px; display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-bottom: 4px; }
 .intent span { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 1px 9px; font-weight: 700; font-size: .92rem; cursor: help; }
 .sprite { font-size: 64px; line-height: 1.15; filter: drop-shadow(0 6px 8px #0009); }
+/* Enemy sprites: 8 frames of 32x32 side by side, shown 4x. A hit flashes. */
+.esprite { width: 128px; height: 128px; margin: 0 auto; image-rendering: pixelated; background-size: 1024px 128px; background-repeat: no-repeat; }
+.ea-idle { animation: eframes 1600ms steps(8) infinite; }
+.ea-angriff { animation: eframes-once 720ms steps(8, jump-none) 1 forwards; }
+.ea-treffer { animation: eframes-once 640ms steps(8, jump-none) 1 forwards, eflash 640ms steps(1) 1; }
+@keyframes eframes { from { background-position: 0 0; } to { background-position: -1024px 0; } }
+@keyframes eframes-once { from { background-position: 0 0; } to { background-position: -896px 0; } }
+@keyframes eflash { 0% { filter: brightness(2.2); } 15% { filter: brightness(1.4); } 30% { filter: none; } }
 .nm { font-family: var(--fd); font-size: 1.2rem; }
 .hp { position: relative; height: 18px; background: #0a0d0e; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 4px 0; }
 .hp i { position: absolute; inset: 0 auto 0 0; background: var(--hp); transition: width .35s; }

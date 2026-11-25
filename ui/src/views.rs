@@ -545,7 +545,7 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
                     }
                 >
                     <div class="intent">{intent}</div>
-                    <div class="sprite">{e.def.icon.clone()}</div>
+                    {enemy_sprite(game, i, &e.def)}
                     <div class="nm">{e.def.name.clone()}</div>
                     {hp_bar(e.hp, e.max_hp, false, format!("{}/{}", e.hp.max(0), e.max_hp))}
                     {chips(e.block, &e.status)}
@@ -753,6 +753,35 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
                 </button>
             </div>
         </section>
+    }
+    .into_any()
+}
+
+/// Enemy in a fight: its animated 32x32 sprite (shown 4x) when one exists,
+/// otherwise the placeholder icon. Re-rendered when its animation changes, so
+/// a new trigger restarts it.
+fn enemy_sprite(game: Game, i: usize, def: &engine::EnemyDef) -> AnyView {
+    if !crate::ENEMY_SPRITES.contains(&def.id.as_str()) {
+        return view! { <div class="sprite">{def.icon.clone()}</div> }.into_any();
+    }
+    let id = def.id.clone();
+    let name = def.name.clone();
+    view! {
+        {move || {
+            let (anim, _) = game
+                .enemy_anim
+                .with(|v| v.get(i).copied())
+                .unwrap_or((crate::EnemyAnim::Idle, 0));
+            let file = anim.file();
+            view! {
+                <div
+                    class=format!("esprite ea-{file}")
+                    style=format!("background-image:url(assets/gegner/{id}_{file}.png)")
+                    role="img"
+                    aria-label=name.clone()
+                ></div>
+            }
+        }}
     }
     .into_any()
 }

@@ -85,7 +85,7 @@ Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`. Die Oberfläche 
 - Ein 8 × 8-Symbol pro Karte, Pixelrahmen je Kartentyp, Edelstein nach Seltenheit.
 - Heldenporträts 16 × 16 mit je 8 Frames für Idle, Heilung, Schaden und Vergiftung.
 - Ein eigenes Hintergrundbild für Titel und jedes Gebiet (320 × 180), dazu animierte Effektebenen wie Schnee, Glut, Nebel, Glühwürmchen oder Nordlicht.
-- Gegner-Stil in Arbeit: aus 3D-Formen gerendert und auf Pixel gerastert. Für die Ratte ist die Variante „Geduckt, Kopf tief“ gewählt, aber noch nicht im Spiel. Die übrigen Gegner haben Platzhalter.
+- Gegner werden aus 3D-Formen gerendert und auf Pixel gerastert (`assets/gegner/`). Die Waldratte ist fertig: gebeugt hockend, 32 × 32, im Kampf 4-fach, mit je 8 Frames für Ruhe, Angriff (Ausholen und Zubeißen, wenn der Gegnerzug Schaden vorsah) und Treffer (Zurückweichen mit kurzem Aufblitzen). `assets/pruefen.ps1` prüft die Blätter. Die übrigen 14 Gegner zeigen noch Emoji-Platzhalter.
 
 ### Ton
 

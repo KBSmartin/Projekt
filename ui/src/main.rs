@@ -87,6 +87,64 @@ impl MerchantAnim {
     }
 }
 
+/// Animation an enemy sprite plays in a fight (sheets in `ui/assets/gegner`,
+/// 8 frames of 32x32 each).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EnemyAnim {
+    Idle,
+    Attack,
+    Hit,
+}
+
+impl EnemyAnim {
+    /// Part of the sprite sheet file name and of the CSS class.
+    pub fn file(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Attack => "angriff",
+            Self::Hit => "treffer",
+        }
+    }
+
+    /// One run through all 8 frames (CSS matches).
+    fn duration(self) -> Duration {
+        Duration::from_millis(match self {
+            Self::Idle => 1600,
+            Self::Attack => 720,
+            Self::Hit => 640,
+        })
+    }
+}
+
+/// Enemies with a sprite sheet in `ui/assets/gegner`; the others still show
+/// their placeholder icon.
+pub const ENEMY_SPRITES: &[&str] = &["rat"];
+
+/// How each enemy reacts to an action: an attack when the enemies had their
+/// turn and it meant to deal damage, a hit when it lost HP otherwise.
+fn enemy_reactions(old: &Run, new: &Run) -> Vec<(usize, EnemyAnim)> {
+    let (Phase::Combat(a), Phase::Combat(b)) = (&old.phase, &new.phase) else {
+        return Vec::new();
+    };
+    let enemy_turn = b.turn > a.turn;
+    a.enemies
+        .iter()
+        .zip(&b.enemies)
+        .enumerate()
+        .filter_map(|(i, (ea, eb))| {
+            if ea.dead || eb.dead {
+                None
+            } else if enemy_turn && ea.intent().damage.is_some() {
+                Some((i, EnemyAnim::Attack))
+            } else if eb.hp < ea.hp {
+                Some((i, EnemyAnim::Hit))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// How long the greeting plays before the merchant goes back to idle.
 const MERCHANT_GREET: Duration = Duration::from_millis(1200);
 /// How long the hero figure walks from one map node to the next (CSS matches).
@@ -196,6 +254,8 @@ pub struct Game {
     /// Merchant animation with a restart counter, and what he is saying.
     pub merchant: RwSignal<(MerchantAnim, u32)>,
     pub merchant_line: RwSignal<&'static str>,
+    /// Animation per enemy of the current fight, each with a restart counter.
+    pub enemy_anim: RwSignal<Vec<(EnemyAnim, u32)>>,
     /// The merchant is saying goodbye; the shop is closed for buying.
     pub leaving_shop: RwSignal<bool>,
     /// Map node the hero figure is walking to; the step happens on arrival.
@@ -226,6 +286,7 @@ impl Game {
             portrait: RwSignal::new((PortraitAnim::Idle, 0)),
             merchant: RwSignal::new((MerchantAnim::Idle, 0)),
             merchant_line: RwSignal::new(""),
+            enemy_anim: RwSignal::new(Vec::new()),
             leaving_shop: RwSignal::new(false),
             walking: RwSignal::new(None),
             title_page: RwSignal::new(TitlePage::Start),
@@ -339,6 +400,29 @@ impl Game {
         }
     }
 
+    /// Plays a one-shot animation on an enemy, then returns it to idle
+    /// (unless a newer one replaced it).
+    fn play_enemy(self, i: usize, anim: EnemyAnim) {
+        let mut key = 0;
+        self.enemy_anim.update(|v| {
+            if v.len() <= i {
+                v.resize(i + 1, (EnemyAnim::Idle, 0));
+            }
+            key = v[i].1.wrapping_add(1);
+            v[i] = (anim, key);
+        });
+        set_timeout(
+            move || {
+                self.enemy_anim.update(|v| {
+                    if v.get(i).is_some_and(|e| e.1 == key) {
+                        v[i] = (EnemyAnim::Idle, key.wrapping_add(1));
+                    }
+                });
+            },
+            anim.duration(),
+        );
+    }
+
     pub fn start_run(self, character: &str) {
         // Random seed; the end screen shows it so runs can be reproduced.
         let seed = (js_sys::Math::random() * 9_007_199_254_740_992.0) as u64;
@@ -395,9 +479,22 @@ impl Game {
             let heard = self
                 .run
                 .with_untracked(|old| old.as_ref().map(|o| cues(o, &next)));
+            let foes = self
+                .run
+                .with_untracked(|old| old.as_ref().map(|o| enemy_reactions(o, &next)));
+            let new_fight = matches!(next.phase, Phase::Combat(_))
+                && !self.run.with_untracked(|old| {
+                    matches!(old.as_ref().map(|o| &o.phase), Some(Phase::Combat(_)))
+                });
+            if new_fight {
+                self.enemy_anim.set(Vec::new());
+            }
             self.run.set(Some(next));
             for cue in heard.into_iter().flatten() {
                 sound::play(cue);
+            }
+            for (i, anim) in foes.into_iter().flatten() {
+                self.play_enemy(i, anim);
             }
             self.react(before);
             if !was_shop && self.in_shop() {

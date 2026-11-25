@@ -636,8 +636,9 @@ pub fn world(game: Game, run: &Run) -> AnyView {
         pan_y.track();
         set_timeout(
             move || {
-                if let Some(el) = plane_ref.get_untracked() {
-                    under_hud.set(el.get_bounding_client_rect().left() < HUD_EDGE);
+                // The map may be gone by now (left within the delay).
+                if let Some(el) = plane_ref.try_get_untracked().flatten() {
+                    under_hud.try_set(el.get_bounding_client_rect().left() < HUD_EDGE);
                 }
             },
             std::time::Duration::from_millis(320),

@@ -9,6 +9,9 @@ $here = $PSScriptRoot
 & (Join-Path $here 'karte\karte.ps1')
 & (Join-Path $here 'karte\figuren.ps1')
 & (Join-Path $here 'karte\hand.ps1')
+& (Join-Path $here 'gegner\rat.ps1') -Anim alle
+& (Join-Path $here 'pruefen.ps1')
+if ($LASTEXITCODE) { throw 'Gegner-Sprites fehlerhaft.' }
 & (Join-Path $here 'sound\sounds.ps1')
 & (Join-Path $here 'sound\musik.ps1')
 $bg = Join-Path $here '..\ui\assets\hintergrund'

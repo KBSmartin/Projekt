@@ -4,8 +4,9 @@ Stand: 19. November 2026. Die Meilensteine folgen `KONZEPT.md`. Erledigtes ist a
 
 ## Als Nächstes
 
-- [ ] Ratte (Variante „Geduckt, Kopf tief“) aus `assets/probe/` als echtes Gegner-Sprite ins Spiel übernehmen, mit Idle-, Angriffs- und Treffer-Animation
-- [ ] Gegner-Pipeline für die übrigen 14 Gegner nach demselben 3D-Stil aufbauen
+- [x] Ratte als echtes Gegner-Sprite im Spiel, mit Idle-, Angriffs- und Treffer-Animation (`assets/gegner/rat.ps1`)
+- [ ] Gegner-Pipeline für die übrigen 14 Gegner nach demselben 3D-Stil aufbauen (Raytracer und Animationsgerüst aus `rat.ps1` in ein gemeinsames Skript ziehen)
+- [ ] Gesicht der Ratte von Hand nachschärfen (Nagezähne, zweites Auge), falls gewünscht
 - [ ] Magier abschwächen: Der Smart-Bot gewinnt mit ihm 68 %, Ziel sind etwa 50 % und wenig Abstand zwischen den Charakteren
 - [ ] Mit M2 (Ausrüstung) beginnen
 
@@ -78,7 +79,7 @@ Stand: 19. November 2026. Die Meilensteine folgen `KONZEPT.md`. Erledigtes ist a
 - [x] Startbildschirm und Pixel-Übergänge zwischen den Bildschirmen
 - [x] Synthetische Soundeffekte und Stummschalter
 - [x] Titelmusik
-- [ ] Gegner-Sprites (32 × 32) für alle Gegner
+- [ ] Gegner-Sprites (32 × 32) für alle Gegner (Ratte fertig, 14 offen)
 - [ ] Item- und Artefakt-Sprites (16 × 16)
 - [ ] Musik für Kampf, Karte und Boss
 - [ ] Balancing per Bot und von Hand, je Charakter
