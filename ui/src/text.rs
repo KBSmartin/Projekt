@@ -141,7 +141,24 @@ pub fn pick_outcome(o: &PickOutcome, data: &GameData) -> String {
     }
 }
 
-/// (icon, value, tooltip) for each active status.
+/// (symbol, explanation) for the legend in a fight.
+pub const SIGNS: &[(&str, &str)] = &[
+    ("staerke", "Stärke: +1 Schaden pro Punkt bei jedem Angriff"),
+    ("schwaeche", "Schwäche: 25 % weniger Schaden"),
+    ("verwundbar", "Verwundbar: 50 % mehr Schaden erlitten"),
+    (
+        "gift",
+        "Gift: verliert zu Rundenbeginn LP, dann sinkt es um 1",
+    ),
+    (
+        "blutung",
+        "Blutung: Gegner verliert nach jedem eigenen Angriff LP, sinkt jede Runde um 1",
+    ),
+    ("dornen", "Dornen: Angreifer erleiden Schaden"),
+    ("block", "Block: hält Schaden ab, verfällt zu Rundenbeginn"),
+];
+
+/// (symbol file, value, tooltip) for each active status.
 pub fn status_chips(s: &Statuses) -> Vec<(&'static str, i32, &'static str)> {
     let mut out = Vec::new();
     let mut add = |v: i32, icon, tip| {
@@ -151,39 +168,40 @@ pub fn status_chips(s: &Statuses) -> Vec<(&'static str, i32, &'static str)> {
     };
     add(
         s.strength,
-        "💪",
+        "staerke",
         "Stärke: +1 Schaden pro Punkt bei jedem Angriff",
     );
     add(
         s.weak as i32,
-        "🥀",
+        "schwaeche",
         "Schwäche: richtet 25 % weniger Schaden an",
     );
     add(
         s.vulnerable as i32,
-        "🎯",
+        "verwundbar",
         "Verwundbar: erleidet 50 % mehr Schaden",
     );
     add(
         s.poison as i32,
-        "🧪",
+        "gift",
         "Gift: verliert zu Rundenbeginn LP, danach sinkt das Gift um 1",
     );
     add(
         s.bleed as i32,
-        "🩸",
+        "blutung",
         "Blutung: verliert nach jedem eigenen Angriff so viele LP, danach sinkt die Blutung jede Runde um 1",
     );
     add(
         s.thorns as i32,
-        "🌵",
+        "dornen",
         "Dornen: wer dich angreift, erleidet Schaden",
     );
     out
 }
 
-/// (text, tooltip) parts of an enemy intent. `damage` is the final damage per hit.
-pub fn intent_parts(m: &Move, damage: Option<i32>) -> Vec<(String, &'static str)> {
+/// (symbol file, text, tooltip) parts of an enemy intent. `damage` is the final
+/// damage per hit.
+pub fn intent_parts(m: &Move, damage: Option<i32>) -> Vec<(&'static str, String, &'static str)> {
     let mut out = Vec::new();
     if let Some(d) = damage {
         let hits = if m.hits > 1 {
@@ -191,33 +209,21 @@ pub fn intent_parts(m: &Move, damage: Option<i32>) -> Vec<(String, &'static str)
         } else {
             String::new()
         };
-        out.push((format!("⚔️ {d}{hits}"), "Angriff"));
+        out.push(("angriff", format!("{d}{hits}"), "Angriff"));
     }
-    let mut add = |v: u32, text: String, tip| {
+    let mut add = |v: u32, file, sign, tip| {
         if v > 0 {
-            out.push((text, tip));
+            out.push((file, format!("{sign}{v}"), tip));
         }
     };
-    add(m.block, format!("🛡️ {}", m.block), "Block");
-    add(m.strength, format!("💪 +{}", m.strength), "Stärke");
-    add(m.heal, format!("💚 {}", m.heal), "Heilung");
-    add(m.weak, format!("🥀 {}", m.weak), "Schwäche auf dich");
-    add(
-        m.vulnerable,
-        format!("🎯 {}", m.vulnerable),
-        "Verwundbar auf dich",
-    );
-    add(m.poison, format!("🧪 {}", m.poison), "Gift auf dich");
-    add(
-        m.burn,
-        format!("🔥 +{}", m.burn),
-        "Brand-Karten in dein Deck",
-    );
-    add(
-        m.frost,
-        format!("❄️ +{}", m.frost),
-        "Frost-Karten in dein Deck",
-    );
+    add(m.block, "block", "", "Block");
+    add(m.strength, "staerke", "+", "Stärke");
+    add(m.heal, "heilung", "", "Heilung");
+    add(m.weak, "schwaeche", "", "Schwäche auf dich");
+    add(m.vulnerable, "verwundbar", "", "Verwundbar auf dich");
+    add(m.poison, "gift", "", "Gift auf dich");
+    add(m.burn, "brand", "+", "Brand-Karten in dein Deck");
+    add(m.frost, "frost", "+", "Frost-Karten in dein Deck");
     out
 }
 

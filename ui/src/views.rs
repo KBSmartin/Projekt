@@ -60,6 +60,33 @@ fn backdrop(id: &str) -> AnyView {
     .into_any()
 }
 
+/// Small 8x8 symbol in running text, shown 2x (`assets/symbole/symbole.ps1`).
+pub(crate) fn icon(name: &str, alt: &'static str) -> AnyView {
+    view! { <img class="ic" src=format!("assets/symbole/{name}.png") alt=alt /> }.into_any()
+}
+
+/// 16x16 picture of a relic (`assets/symbole/bilder.ps1`); the file is named
+/// after the variant.
+fn relic_icon(relic: engine::Relic) -> AnyView {
+    let file = format!("{relic:?}").to_lowercase();
+    view! { <img class="rlic" src=format!("assets/symbole/{file}.png") alt="" /> }.into_any()
+}
+
+/// 32x32 picture on events, region intros and the end screens, shown 3x.
+fn picture(name: &str) -> AnyView {
+    view! { <img class="pic" src=format!("assets/symbole/{name}.png") alt="" /> }.into_any()
+}
+
+/// HP with the heart, as "current/maximum".
+fn hp_label(hp: i32, max: i32) -> AnyView {
+    view! { {icon("leben", "LP")} {format!("{}/{}", hp.max(0), max)} }.into_any()
+}
+
+/// An amount of gold with the coin.
+fn gold_label(amount: impl std::fmt::Display) -> AnyView {
+    view! { {icon("gold", "Gold")} {amount.to_string()} }.into_any()
+}
+
 /// Sprite sheet prefix of a character's portrait.
 pub(crate) fn hero_file(character: &str) -> &'static str {
     match character {
@@ -118,7 +145,7 @@ fn side_panel(game: Game, run: &Run, hp: i32, max_hp: i32) -> AnyView {
         .map(|i| match relics.get(i) {
             Some(info) => view! {
                 <div class="slot full" title=format!("{}: {}", info.name, info.description)>
-                    {info.icon.clone()}
+                    {relic_icon(info.id)}
                 </div>
             }
             .into_any(),
@@ -130,11 +157,12 @@ fn side_panel(game: Game, run: &Run, hp: i32, max_hp: i32) -> AnyView {
             <div class="box pbox">
                 {portrait(game, &run.character)}
                 <div class="pname" title=tip>{name}</div>
-                {hp_bar(hp, max_hp, false, format!("❤️ {}/{}", hp.max(0), max_hp))}
+                {hp_bar(hp, max_hp, false, hp_label(hp, max_hp))}
                 <div class="pmeta">
-                    <span>{format!("🪙 {}", run.gold)}</span>
+                    <span>{gold_label(run.gold)}</span>
                     <span title=region.subtitle.clone()>
-                        {format!("{} {}/{}", region.icon, run.region + 1, d.regions.len())}
+                        {icon(&region.id, "Gebiet")}
+                        {format!("{}/{}", run.region + 1, d.regions.len())}
                     </span>
                 </div>
             </div>
@@ -178,6 +206,7 @@ fn start_screen(game: Game) -> AnyView {
         {backdrop("title")}
         <main class="app">
             <div class="start">
+                <img class="emblem" src="assets/logo/zeichen_64.png" alt="" />
                 <div class="kicker">"Ein Deckbuilder-Roguelike · Vorab-Version"</div>
                 <h1>"Verlorene Lande"</h1>
                 <p class="lead">
@@ -216,7 +245,7 @@ fn choose_screen(game: Game) -> AnyView {
                 <button class="char" on:click=move |_| game.start_run(&id)>
                     {portrait_idle(&c.id)}
                     <span class="char-name">{c.name.clone()}</span>
-                    <span class="char-hp">{format!("❤️ {} LP", c.max_hp)}</span>
+                    <span class="char-hp">{icon("leben", "")} {format!("{} LP", c.max_hp)}</span>
                     <span class="char-desc">{c.description.clone()}</span>
                     <span class="char-trait">
                         <b>{c.trait_name.clone()}</b>
@@ -249,7 +278,7 @@ fn top_bar(game: Game, run: &Run, show_hp: bool) -> AnyView {
     let d = data();
     let region = &d.regions[run.region];
     let ch = d.character(&run.character);
-    let ch_label = ch.map_or(String::new(), |c| format!("{} {}", c.icon, c.name));
+    let ch_label = ch.map(|c| view! { {icon(&c.id, "")} {c.name.clone()} });
     let ch_tip = ch.map_or(String::new(), |c| {
         format!("{}: {}", c.trait_name, c.trait_text)
     });
@@ -260,13 +289,12 @@ fn top_bar(game: Game, run: &Run, show_hp: bool) -> AnyView {
         .map(|info| {
             view! {
                 <span class="relic" title=format!("{}: {}", info.name, info.description)>
-                    {info.icon.clone()}
+                    {relic_icon(info.id)}
                 </span>
             }
         })
         .collect_view();
-    let hp = show_hp
-        .then(|| view! { <span class="stat">{format!("❤️ {}/{}", run.hp, run.max_hp)}</span> });
+    let hp = show_hp.then(|| view! { <span class="stat">{hp_label(run.hp, run.max_hp)}</span> });
     view! {
         <header class="bar">
             <div class="reg">
@@ -278,7 +306,7 @@ fn top_bar(game: Game, run: &Run, show_hp: bool) -> AnyView {
             <div class="stats">
                 <span class="stat" title=ch_tip>{ch_label}</span>
                 {hp}
-                <span class="stat">{format!("🪙 {}", run.gold)}</span>
+                <span class="stat">{gold_label(run.gold)}</span>
                 <div class="relics">{relics}</div>
                 <button class="btn ghost" on:click=move |_| game.deck_open.set(true)>
                     {format!("Deck ({})", run.deck.len())}
@@ -296,16 +324,21 @@ fn notice(run: &Run) -> Option<AnyView> {
 
 fn chips(block: i32, status: &Statuses) -> AnyView {
     let block = (block > 0).then(|| {
-        view! { <span class="chip blkc" title="Block: hält Schaden ab">{format!("🛡️ {block}")}</span> }
+        view! {
+            <span class="chip blkc" title="Block: hält Schaden ab">
+                {icon("block", "Block")}
+                {block}
+            </span>
+        }
     });
     let statuses = text::status_chips(status)
         .into_iter()
-        .map(|(icon, v, tip)| view! { <span class="chip" title=tip>{format!("{icon} {v}")}</span> })
+        .map(|(file, v, tip)| view! { <span class="chip" title=tip>{icon(file, "")} {v}</span> })
         .collect_view();
     view! { <div class="chips">{block}{statuses}</div> }.into_any()
 }
 
-fn hp_bar(hp: i32, max: i32, large: bool, label: String) -> AnyView {
+fn hp_bar(hp: i32, max: i32, large: bool, label: AnyView) -> AnyView {
     let pct = f64::from(hp.max(0)) / f64::from(max.max(1)) * 100.0;
     view! {
         <div class=if large { "hp lg" } else { "hp" }>
@@ -456,7 +489,7 @@ fn relic_box(relic: engine::Relic, extra: Option<AnyView>) -> AnyView {
     };
     view! {
         <div class="relicgain">
-            <span>{info.icon.clone()}</span>
+            <span>{relic_icon(info.id)}</span>
             <div>
                 <b>{info.name.clone()}</b>
                 <br />
@@ -475,7 +508,7 @@ fn region_intro(game: Game, run: &Run) -> AnyView {
     view! {
         {top_bar(game, run, true)}
         <section class="panel">
-            <div class="big">{r.icon.clone()}</div>
+            {picture(&format!("{}_bild", r.id))}
             <h2>{r.name.clone()}</h2>
             <p class="small">{r.subtitle.clone()}</p>
             <p class="prose">{r.intro.clone()}</p>
@@ -528,7 +561,7 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
             };
             let intent = intent
                 .into_iter()
-                .map(|(t, tip)| view! { <span title=tip>{t}</span> })
+                .map(|(file, t, tip)| view! { <span title=tip>{icon(file, "")} {t}</span> })
                 .collect_view();
             let class = format!(
                 "en{}{}",
@@ -545,9 +578,14 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
                     }
                 >
                     <div class="intent">{intent}</div>
-                    {enemy_sprite(game, i, &e.def)}
+                    {enemy_sprite(game, i, &e.def, e.dead)}
                     <div class="nm">{e.def.name.clone()}</div>
-                    {hp_bar(e.hp, e.max_hp, false, format!("{}/{}", e.hp.max(0), e.max_hp))}
+                    {hp_bar(
+                        e.hp,
+                        e.max_hp,
+                        false,
+                        format!("{}/{}", e.hp.max(0), e.max_hp).into_any(),
+                    )}
                     {chips(e.block, &e.status)}
                 </div>
             }
@@ -622,7 +660,7 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
                         <small>{format!("/{}", c.max_energy)}</small>
                     </div>
                     <div class="mid">
-                        {hp_bar(p.hp, p.max_hp, true, format!("❤️ {}/{}", p.hp.max(0), p.max_hp))}
+                        {hp_bar(p.hp, p.max_hp, true, hp_label(p.hp, p.max_hp))}
                         {chips(p.block, &p.status)}
                     </div>
                 </div>
@@ -641,12 +679,10 @@ fn combat_screen(game: Game, run: &Run, c: &Combat) -> AnyView {
                 </button>
                 <details class="legend">
                     <summary>"Zeichen erklärt"</summary>
-                    <p>
-                        "💪 Stärke: +1 Schaden pro Punkt bei jedem Angriff · 🥀 Schwäche: 25 % weniger Schaden · "
-                        "🎯 Verwundbar: 50 % mehr Schaden erlitten · 🧪 Gift: verliert zu Rundenbeginn LP, dann sinkt es um 1 · "
-                        "🩸 Blutung: Gegner verliert nach jedem eigenen Angriff LP, sinkt jede Runde um 1 · "
-                        "🌵 Dornen: Angreifer erleiden Schaden · 🛡️ Block: hält Schaden ab, verfällt zu Rundenbeginn"
-                    </p>
+                    <ul class="signs">{text::SIGNS
+                        .iter()
+                        .map(|(file, t)| view! { <li>{icon(file, "")} <span>{*t}</span></li> })
+                        .collect_view()}</ul>
                 </details>
             </section>
             <section class="hand">{hand}</section>
@@ -708,7 +744,7 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
                         on:click=move |_| game.act(move |r, _| r.buy_card(i))
                     >
                         <span class=if affordable { "price" } else { "price no" }>
-                            {format!("🪙 {}", item.price)}
+                            {gold_label(item.price)}
                         </span>
                     </button>
                 </div>
@@ -722,7 +758,7 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
                 disabled=item.sold || run.gold < item.price
                 on:click=move |_| game.act(|r, _| r.buy_relic())
             >
-                {if item.sold { "Verkauft".to_string() } else { format!("🪙 {}", item.price) }}
+                {if item.sold { "Verkauft".into_any() } else { gold_label(item.price) }}
             </button>
         }
         .into_any();
@@ -742,7 +778,8 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
                     disabled=!can_remove
                     on:click=move |_| game.act(|r, _| r.shop_remove())
                 >
-                    {format!("Karte entfernen · 🪙 {}", shop.remove_cost)}
+                    "Karte entfernen "
+                    {gold_label(shop.remove_cost)}
                 </button>
                 <button
                     class="btn"
@@ -757,13 +794,15 @@ fn shop_screen(game: Game, run: &Run, shop: &Shop) -> AnyView {
     .into_any()
 }
 
-/// Enemy in a fight: its animated 32x32 sprite (shown 4x) when one exists,
-/// otherwise the placeholder icon. Re-rendered when its animation changes, so
-/// a new trigger restarts it.
-fn enemy_sprite(game: Game, i: usize, def: &engine::EnemyDef) -> AnyView {
-    if !crate::ENEMY_SPRITES.contains(&def.id.as_str()) {
+/// Enemy in a fight: its animated sprite (shown 4x) when one exists, otherwise
+/// the placeholder icon. Re-rendered when its animation changes, so a new
+/// trigger restarts it.
+fn enemy_sprite(game: Game, i: usize, def: &engine::EnemyDef, dead: bool) -> AnyView {
+    let Some(frame) = crate::enemy_frame(&def.id) else {
         return view! { <div class="sprite">{def.icon.clone()}</div> }.into_any();
-    }
+    };
+    // Frames with a margin hang over the box at the sides and at the top.
+    let top = if frame > 32 { 16 } else { 0 };
     let id = def.id.clone();
     let name = def.name.clone();
     view! {
@@ -772,11 +811,18 @@ fn enemy_sprite(game: Game, i: usize, def: &engine::EnemyDef) -> AnyView {
                 .enemy_anim
                 .with(|v| v.get(i).copied())
                 .unwrap_or((crate::EnemyAnim::Idle, 0));
+            let anim = if dead && anim != crate::EnemyAnim::Die {
+                crate::EnemyAnim::Dead
+            } else {
+                anim
+            };
             let file = anim.file();
             view! {
                 <div
-                    class=format!("esprite ea-{file}")
-                    style=format!("background-image:url(assets/gegner/{id}_{file}.png)")
+                    class=format!("esprite {}", anim.class())
+                    style=format!(
+                        "--f:{frame};--top:{top};background-image:url(assets/gegner/{id}_{file}.png)"
+                    )
                     role="img"
                     aria-label=name.clone()
                 ></div>
@@ -820,7 +866,7 @@ fn rest_screen(game: Game, run: &Run) -> AnyView {
     view! {
         {top_bar(game, run, true)}
         <section class="panel">
-            <div class="big">"🏕️"</div>
+            {picture("rast")}
             <h2>"Rastplatz"</h2>
             <p class="small">"Ein Feuer, das noch warm ist."</p>
             <div class="row">
@@ -881,7 +927,7 @@ fn event_screen(game: Game, run: &Run, state: &EventState) -> AnyView {
     view! {
         {top_bar(game, run, true)}
         <section class="panel">
-            <div class="big">{ev.icon.clone()}</div>
+            {picture(&ev.id)}
             <h2>{ev.title.clone()}</h2>
             <p class="prose">{ev.text.clone()}</p>
             {body}
@@ -927,7 +973,7 @@ fn end_screen(game: Game, run: &Run) -> AnyView {
     view! {
         {top_bar(game, run, true)}
         <section class="panel">
-            <div class="big">{if won { "👑" } else { "🪦" }}</div>
+            {picture(if won { "sieg" } else { "grab" })}
             <h1 class="end">{if won { "Die Lande sind befreit" } else { "Dein Lauf endet hier" }}</h1>
             <p>
                 {format!(
@@ -958,7 +1004,7 @@ fn deck_overlay(game: Game, run: &Run) -> AnyView {
             .map(|info| {
                 view! {
                     <div>
-                        <span class="rl-icon">{info.icon.clone()}</span>
+                        {relic_icon(info.id)}
                         <span>
                             <b>{info.name.clone()}</b>
                             {format!(": {}", info.description)}
@@ -972,9 +1018,9 @@ fn deck_overlay(game: Game, run: &Run) -> AnyView {
             <div class="rl">{list}</div>
         }
     });
-    let trait_line = d
-        .character(&run.character)
-        .map(|c| format!("{} {} · {}: {}", c.icon, c.name, c.trait_name, c.trait_text));
+    let trait_line = d.character(&run.character).map(|c| {
+        view! { {icon(&c.id, "")} {format!("{} · {}: {}", c.name, c.trait_name, c.trait_text)} }
+    });
     view! {
         <div class="ov" on:click=move |_| game.deck_open.set(false)>
             <div class="ovin" on:click=|ev| ev.stop_propagation()>

@@ -98,17 +98,25 @@ svg.map { width: 100%; height: auto; display: block; }
 .enemies { display: flex; justify-content: center; gap: 12px; min-height: 230px; align-items: flex-end; margin: 8px 0; }
 .en { position: relative; width: 158px; text-align: center; padding: 8px 6px 10px; border-radius: 12px; border: 1px solid transparent; }
 .en.tg { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, transparent); cursor: pointer; }
-.en.dead { opacity: .16; filter: grayscale(1); pointer-events: none; }
+.en.dead { pointer-events: none; }
+.en.dead > :not(.esprite):not(.sprite) { opacity: .16; filter: grayscale(1); transition: opacity 1s; }
+.en.dead > .sprite { opacity: .16; filter: grayscale(1); }
+.fight-scene .en.dead { background: none; border-color: transparent; }
 .intent { min-height: 30px; display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-bottom: 4px; }
 .intent span { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 1px 9px; font-weight: 700; font-size: .92rem; cursor: help; }
 .sprite { font-size: 64px; line-height: 1.15; filter: drop-shadow(0 6px 8px #0009); }
-/* Enemy sprites: 8 frames of 32x32 side by side, shown 4x. A hit flashes. */
-.esprite { width: 128px; height: 128px; margin: 0 auto; image-rendering: pixelated; background-size: 1024px 128px; background-repeat: no-repeat; }
+/* Enemy sprites: 8 square frames of --f art pixels side by side, shown 4x; the
+   top --top pixels are margin above the figure. A hit flashes. Clicks belong to
+   the enemy box, not to the overhanging frame. */
+.esprite { --w: calc(var(--f) * 4px); position: relative; left: 50%; width: var(--w); height: var(--w); margin: calc(var(--top) * -4px) 0 0 calc(var(--w) / -2); image-rendering: pixelated; background-size: calc(var(--w) * 8) var(--w); background-repeat: no-repeat; pointer-events: none; }
 .ea-idle { animation: eframes 1600ms steps(8) infinite; }
 .ea-angriff { animation: eframes-once 720ms steps(8, jump-none) 1 forwards; }
 .ea-treffer { animation: eframes-once 640ms steps(8, jump-none) 1 forwards, eflash 640ms steps(1) 1; }
-@keyframes eframes { from { background-position: 0 0; } to { background-position: -1024px 0; } }
-@keyframes eframes-once { from { background-position: 0 0; } to { background-position: -896px 0; } }
+.ea-tod { animation: eframes-once 1200ms steps(8, jump-none) 1 forwards, eflash 640ms steps(1) 1; }
+/* What is left of a fallen enemy: the last frame of its death. */
+.ea-reste { background-position: calc(var(--w) * -7) 0; filter: brightness(.75); transition: filter 1s; }
+@keyframes eframes { from { background-position: 0 0; } to { background-position: calc(var(--w) * -8) 0; } }
+@keyframes eframes-once { from { background-position: 0 0; } to { background-position: calc(var(--w) * -7) 0; } }
 @keyframes eflash { 0% { filter: brightness(2.2); } 15% { filter: brightness(1.4); } 30% { filter: none; } }
 .nm { font-family: var(--fd); font-size: 1.2rem; }
 .hp { position: relative; height: 18px; background: #0a0d0e; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 4px 0; }
@@ -116,6 +124,18 @@ svg.map { width: 100%; height: auto; display: block; }
 .hp b { position: relative; display: block; font-size: .8rem; line-height: 16px; font-variant-numeric: tabular-nums; text-align: center; }
 .hp.lg { height: 24px; min-width: 200px; }
 .hp.lg b { line-height: 22px; font-size: .95rem; }
+/* Own pixel symbols: 8x8 in text (2x), relics 16x16 (2x), pictures 32x32 (3x). */
+.ic { width: 16px; height: 16px; image-rendering: pixelated; vertical-align: -4px; margin-right: 6px; }
+.rlic { width: 32px; height: 32px; image-rendering: pixelated; }
+.relicgain .rlic { width: 48px; height: 48px; display: block; }
+.pic { width: 96px; height: 96px; image-rendering: pixelated; }
+.hp b .ic { vertical-align: -5px; filter: drop-shadow(2px 0 0 #2a0608) drop-shadow(-2px 0 0 #2a0608) drop-shadow(0 2px 0 #2a0608) drop-shadow(0 -2px 0 #2a0608); }
+.mute .ic { margin: 0; vertical-align: -3px; }
+.signs { list-style: none; display: grid; gap: 6px; text-align: left; }
+.statsbox .legend { position: relative; }
+.statsbox .signs { position: absolute; z-index: 6; left: -8px; bottom: calc(100% + 8px); width: 360px; padding: 12px; background: #0c0a10f2; border: 2px solid var(--line); box-shadow: 4px 4px 0 #000; }
+.signs li { display: flex; align-items: flex-start; }
+.signs .ic { flex: none; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; min-height: 24px; }
 .chip { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-size: .85rem; font-weight: 700; cursor: help; }
 .chip.blkc { border-color: var(--blk); color: var(--blk); }
@@ -433,6 +453,7 @@ h3 { font-size: 12px; font-weight: 400; }
 
 /* Start screen and character choice. */
 .start { min-height: 100vh; display: grid; align-content: center; justify-items: center; text-align: center; gap: 6px; padding-bottom: 8vh; }
+.emblem { width: 128px; height: 128px; image-rendering: pixelated; filter: drop-shadow(6px 6px 0 #000a); animation: title-in 1.2s steps(6) both; }
 .start h1 { font-size: 56px; margin: 6px 0 4px; text-shadow: 6px 6px 0 #000, 0 0 30px #0008; animation: title-in 1.2s steps(6) both; }
 .start .lead { margin: 10px auto 22px; text-shadow: 2px 2px 0 #000; }
 .start .how { text-align: left; margin: 18px auto 0; background: #0c0a10d0; border: 2px solid var(--line); padding: 14px 18px 14px 32px; box-shadow: 4px 4px 0 #000; }
@@ -487,7 +508,11 @@ h3 { font-size: 12px; font-weight: 400; }
 .plane { transition: left .25s ease-out; }
 .world.dragging .plane { transition: none; }
 /* Wheel zoom: the whole board scales on screen, 3D stays intact. */
-.zoom { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 70%; transition: transform .2s ease-out; }
+/* Fix: the board is tilted back, so its far half lies behind the flat .zoom layer
+   and .zoom took every click there. Only the fields themselves take clicks; dragging
+   and the wheel go to .world. */
+.zoom { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 70%; transition: transform .2s ease-out; pointer-events: none; }
+.zoom .spot { pointer-events: auto; }
 .world.dragging .zoom { transition: none; }
 
 

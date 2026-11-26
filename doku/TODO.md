@@ -1,11 +1,15 @@
 # Verlorene Lande: To-do-Liste
 
-Stand: 19. November 2026. Die Meilensteine folgen `KONZEPT.md`. Erledigtes ist abgehakt, damit der Fortschritt sichtbar bleibt.
+Stand: 25. November 2026. Die Meilensteine folgen `KONZEPT.md`. Erledigtes ist abgehakt, damit der Fortschritt sichtbar bleibt.
 
 ## Als Nächstes
 
 - [x] Ratte als echtes Gegner-Sprite im Spiel, mit Idle-, Angriffs- und Treffer-Animation (`assets/gegner/rat.ps1`)
-- [ ] Gegner-Pipeline für die übrigen 14 Gegner nach demselben 3D-Stil aufbauen (Raytracer und Animationsgerüst aus `rat.ps1` in ein gemeinsames Skript ziehen)
+- [x] Gegner-Pipeline (`sdf.ps1`, `anim.ps1`), alle 15 Gegner entworfen
+- [x] Alle 15 Gegner animiert und im Spiel: Ruhe, Angriff, Treffer, Tod
+- [x] Eigene Symbole statt Emojis (`assets/symbole/`)
+- [x] Spielzeichen ohne Namen (zerbrochener Schild): Startbildschirm, Favicon, EXE-Symbol
+- [ ] Spielname festlegen, danach Schriftzug wählen (`assets/logo/logo.ps1`)
 - [ ] Gesicht der Ratte von Hand nachschärfen (Nagezähne, zweites Auge), falls gewünscht
 - [ ] Magier abschwächen: Der Smart-Bot gewinnt mit ihm 68 %, Ziel sind etwa 50 % und wenig Abstand zwischen den Charakteren
 - [ ] Mit M2 (Ausrüstung) beginnen
@@ -79,8 +83,9 @@ Stand: 19. November 2026. Die Meilensteine folgen `KONZEPT.md`. Erledigtes ist a
 - [x] Startbildschirm und Pixel-Übergänge zwischen den Bildschirmen
 - [x] Synthetische Soundeffekte und Stummschalter
 - [x] Titelmusik
-- [ ] Gegner-Sprites (32 × 32) für alle Gegner (Ratte fertig, 14 offen)
-- [ ] Item- und Artefakt-Sprites (16 × 16)
+- [x] Gegner-Sprites für alle Gegner mit Ruhe, Angriff, Treffer und Tod
+- [x] Symbole für Status, Absichten, Relikte, Ereignisse, Gebiete und Endbildschirme
+- [ ] Item-Sprites (16 × 16)
 - [ ] Musik für Kampf, Karte und Boss
 - [ ] Balancing per Bot und von Hand, je Charakter
 - [ ] Kurze Einführung im ersten Lauf, die Tags erklärt

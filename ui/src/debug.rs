@@ -72,7 +72,8 @@ pub fn panel(game: Game) -> impl IntoView {
     view! {
         <div class="debug" class:open=move || open.get()>
             <button class="debug-toggle" on:click=move |_| open.update(|o| *o = !*o)>
-                "🐞 Debug"
+                {crate::views::icon("debug", "")}
+                " Debug"
             </button>
             <Show when=move || open.get()>
                 <div class="debug-body">

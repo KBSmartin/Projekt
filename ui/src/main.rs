@@ -19,6 +19,8 @@ use std::time::Duration;
 
 /// How long a finished fight stays visible before the reward screen.
 const COMBAT_END_DELAY: Duration = Duration::from_millis(900);
+/// A won fight stays until the last enemy's death has played out.
+const COMBAT_WON_DELAY: Duration = Duration::from_millis(1900);
 
 static DATA: OnceLock<Result<GameData, String>> = OnceLock::new();
 
@@ -88,21 +90,44 @@ impl MerchantAnim {
 }
 
 /// Animation an enemy sprite plays in a fight (sheets in `ui/assets/gegner`,
-/// 8 frames of 32x32 each).
+/// 8 square frames each).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EnemyAnim {
     Idle,
     Attack,
     Hit,
+    /// Plays once, then [`EnemyAnim::Dead`] keeps showing what is left.
+    Die,
+    Dead,
 }
 
 impl EnemyAnim {
-    /// Part of the sprite sheet file name and of the CSS class.
+    /// Part of the sprite sheet file name.
     pub fn file(self) -> &'static str {
         match self {
             Self::Idle => "idle",
             Self::Attack => "angriff",
             Self::Hit => "treffer",
+            Self::Die | Self::Dead => "tod",
+        }
+    }
+
+    /// CSS class that plays the sheet.
+    pub fn class(self) -> &'static str {
+        match self {
+            Self::Dead => "ea-reste",
+            Self::Idle => "ea-idle",
+            Self::Attack => "ea-angriff",
+            Self::Hit => "ea-treffer",
+            Self::Die => "ea-tod",
+        }
+    }
+
+    /// What is shown after one run.
+    fn next(self) -> Self {
+        match self {
+            Self::Die | Self::Dead => Self::Dead,
+            _ => Self::Idle,
         }
     }
 
@@ -112,16 +137,43 @@ impl EnemyAnim {
             Self::Idle => 1600,
             Self::Attack => 720,
             Self::Hit => 640,
+            Self::Die | Self::Dead => 1200,
         })
     }
 }
 
-/// Enemies with a sprite sheet in `ui/assets/gegner`; the others still show
-/// their placeholder icon.
-pub const ENEMY_SPRITES: &[&str] = &["rat"];
+/// Enemies with a sprite sheet in `ui/assets/gegner` and the frame size in art
+/// pixels; the others still show their placeholder icon. Frames are 16 pixels
+/// larger than the art (room for lunges), except for the rat.
+const ENEMY_SPRITES: &[(&str, u32)] = &[
+    ("rat", 32),
+    ("shroom", 48),
+    ("wolf", 48),
+    ("moss", 64),
+    ("mother", 64),
+    ("scorp", 48),
+    ("spark", 48),
+    ("worm", 48),
+    ("priest", 64),
+    ("colossus", 64),
+    ("guard", 48),
+    ("elem", 48),
+    ("giant", 48),
+    ("knight", 64),
+    ("king", 64),
+];
+
+/// Frame size of an enemy's sprite sheet, if it has one.
+pub fn enemy_frame(id: &str) -> Option<u32> {
+    ENEMY_SPRITES
+        .iter()
+        .find(|(name, _)| *name == id)
+        .map(|&(_, frame)| frame)
+}
 
 /// How each enemy reacts to an action: an attack when the enemies had their
-/// turn and it meant to deal damage, a hit when it lost HP otherwise.
+/// turn and it meant to deal damage, a hit when it lost HP otherwise, and its
+/// death.
 fn enemy_reactions(old: &Run, new: &Run) -> Vec<(usize, EnemyAnim)> {
     let (Phase::Combat(a), Phase::Combat(b)) = (&old.phase, &new.phase) else {
         return Vec::new();
@@ -132,8 +184,10 @@ fn enemy_reactions(old: &Run, new: &Run) -> Vec<(usize, EnemyAnim)> {
         .zip(&b.enemies)
         .enumerate()
         .filter_map(|(i, (ea, eb))| {
-            if ea.dead || eb.dead {
+            if ea.dead {
                 None
+            } else if eb.dead {
+                Some((i, EnemyAnim::Die))
             } else if enemy_turn && ea.intent().damage.is_some() {
                 Some((i, EnemyAnim::Attack))
             } else if eb.hp < ea.hp {
@@ -400,8 +454,8 @@ impl Game {
         }
     }
 
-    /// Plays a one-shot animation on an enemy, then returns it to idle
-    /// (unless a newer one replaced it).
+    /// Plays a one-shot animation on an enemy, then returns it to idle or, for
+    /// a death, leaves the remains (unless a newer one replaced it).
     fn play_enemy(self, i: usize, anim: EnemyAnim) {
         let mut key = 0;
         self.enemy_anim.update(|v| {
@@ -415,7 +469,7 @@ impl Game {
             move || {
                 self.enemy_anim.update(|v| {
                     if v.get(i).is_some_and(|e| e.1 == key) {
-                        v[i] = (EnemyAnim::Idle, key.wrapping_add(1));
+                        v[i] = (anim.next(), key.wrapping_add(1));
                     }
                 });
             },
@@ -558,10 +612,18 @@ impl Game {
     /// Not generic on purpose: calling the generic `act` from here would make
     /// the compiler instantiate `act` endlessly.
     fn schedule_combat_end(self) {
-        let over = self.run.with_untracked(
-            |run| matches!(run.as_ref().map(|r| &r.phase), Some(Phase::Combat(c)) if c.is_over()),
-        );
-        if !over || self.finishing.get_untracked() {
+        let outcome = self
+            .run
+            .with_untracked(|run| match run.as_ref().map(|r| &r.phase) {
+                Some(Phase::Combat(c)) => c.outcome,
+                _ => None,
+            });
+        let delay = match outcome {
+            Some(engine::Outcome::Win) => COMBAT_WON_DELAY,
+            Some(engine::Outcome::Lose) => COMBAT_END_DELAY,
+            None => return,
+        };
+        if self.finishing.get_untracked() {
             return;
         }
         self.finishing.set(true);
@@ -576,7 +638,7 @@ impl Game {
                     Err(e) => leptos::logging::warn!("Kampfende abgelehnt: {e}"),
                 }
             },
-            COMBAT_END_DELAY,
+            delay,
         );
     }
 }
@@ -623,7 +685,7 @@ fn App() -> impl IntoView {
                     muted.set(sound::muted());
                 }
             >
-                {move || if muted.get() { "🔇" } else { "🔊" }}
+                {move || views::icon(if muted.get() { "ton_aus" } else { "ton_an" }, "")}
             </button>
             {move || views::wipe(game.cover.get())}
         </div>

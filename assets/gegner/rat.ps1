@@ -4,7 +4,7 @@
 #   -Pose <name>   one of the poses below; writes <Out>/rat_<pose>.png
 #   -Study         flat grey form study (pose phase)
 #   -Sheet         combine all rendered studies into rat_posen3.png
-#   -Anim <name>   idle, angriff, treffer or alle: 8-frame sheets of the
+#   -Anim <name>   idle, angriff, treffer, tod or alle: 8-frame sheets of the
 #                  chosen pose (hocken) as <Out>/rat_<anim>.png, by default
 #                  into ui/assets/gegner
 param(
@@ -15,7 +15,7 @@ param(
   [switch]$Sheet,
   [double]$CamYaw = 999,
   [double]$HeadTurn = 999,
-  [ValidateSet('', 'idle', 'angriff', 'treffer', 'alle')][string]$Anim = ''
+  [ValidateSet('', 'idle', 'angriff', 'treffer', 'tod', 'alle')][string]$Anim = ''
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -325,6 +325,14 @@ $tracer = [RatTracer]::new()
 $build = {
   $parts.Clear()
   . $buildPose
+  # Death: the body (all but the 61 tail balls) rolls onto its back, the eye shuts.
+  if ($A -and $A.die -gt 0) {
+    $M = Mat 0 0 (158 * $A.die); $pv = @(0, 7.2, 0)
+    for ($i = 0; $i -lt $parts.Count - 61; $i++) {
+      $p = $parts[$i]; $v = MatVec $M @($p.c[0], ($p.c[1] - $pv[1]), $p.c[2]); $p.c = @($v[0], ($v[1] + $pv[1] - 1.0 * $A.die), ($v[2] - 2.0 * $A.die)); $p.rot = MulM $M $p.rot
+      if ($p.mat -eq 'eye' -and $A.die -gt 0.4) { $p.mat = 'fur'; $p.lift = -0.2 }
+    }
+  }
   $script:View = MulM (Mat $pitch 0 0) (Mat 0 $yaw 0)
   $script:Lw = Norm (Mtv $View (Norm @(-0.6, 0.75, 0.55)))
   $script:Rw = Norm (Mtv $View (Norm @(0.75, 0.35, -0.55)))
@@ -406,15 +414,16 @@ function Frame($bb) {
 }
 
 # Animation curves for the hunched pose, 8 frames each: offsets for $A.
-$zero = @{ breath = 0.0; headZ = 0.0; headY = 0.0; jaw = 0.0; arm = 0.0; tail = 0.0; bodyZ = 0.0; tilt = 0.0; hackles = 0.0 }
+$zero = @{ breath = 0.0; headZ = 0.0; headY = 0.0; jaw = 0.0; arm = 0.0; tail = 0.0; bodyZ = 0.0; tilt = 0.0; hackles = 0.0; die = 0.0 }
 function Keys([string]$anim, [int]$f) {
   $k = $zero.Clone()
   switch ($anim) {
     'idle' {
       # Slow breathing, the tail tip twitching, the jaw working a little.
       $p = $f / 8.0 * 2 * [Math]::PI
-      $k.breath = [Math]::Sin($p); $k.headY = 0.15 * [Math]::Sin($p); $k.tail = 0.7 * [Math]::Sin($p + 1.2)
-      $k.jaw = 0.1 * (1 + [Math]::Sin(2 * $p)) / 2
+      # The head holds still, or eyes and snout would flicker between pixels.
+      $k.breath = [Math]::Sin($p); $k.headY = -0.2 * [Math]::Sin($p); $k.tail = 0.7 * [Math]::Sin($p)
+      $k.jaw = 0.05 * (1 - [Math]::Cos(2 * $p))
     }
     'angriff' {
       # Rear back with the hackles up, then lunge and bite, swiping the paw.
@@ -428,6 +437,19 @@ function Keys([string]$anim, [int]$f) {
         @(0.2, 0.4, -0.2, 4, 0.0, 0.2, 0.0),
         @(0, 0, 0, 0, 0, 0, 0))[$f]
       $k.bodyZ = $t[0]; $k.headZ = $t[1]; $k.headY = $t[2]; $k.tilt = $t[3]; $k.jaw = $t[4]; $k.arm = $t[5]; $k.hackles = $t[6]
+    }
+    'tod' {
+      # Knocked back, then rolls onto its side; the tail drops.
+      $t = @(
+        @(0, 0, 0, 0, 0, 0, 0),
+        @(-0.9, -1.3, 0.8, -24, 0.5, 0.9, 0.03),
+        @(-0.9, -1.2, 0.6, -20, 0.5, -0.7, 0.3),
+        @(-0.5, -0.6, 0.2, -12, 0.4, 0.5, 0.65),
+        @(0, 0, 0, -6, 0.3, 0.3, 0.95),
+        @(0, 0, 0, -6, 0.3, 0.7, 1.04),
+        @(0, 0, 0, -6, 0.3, 0.2, 1.0),
+        @(0, 0, 0, -6, 0.3, 0, 1.0))[$f]
+      $k.bodyZ = $t[0]; $k.headZ = $t[1]; $k.headY = $t[2]; $k.tilt = $t[3]; $k.jaw = $t[4]; $k.tail = $t[5]; $k.die = $t[6]
     }
     'treffer' {
       # Knocked back, head thrown up, jaws open, tail lashing, then recover.
@@ -457,7 +479,7 @@ if (-not $Anim) {
 
 # Animation sheets: one framing for all frames of all animations, so the rat
 # does not jump between them.
-$anims = if ($Anim -eq 'alle') { @('idle', 'angriff', 'treffer') } else { @($Anim) }
+$anims = if ($Anim -eq 'alle') { @('idle', 'angriff', 'treffer', 'tod') } else { @($Anim) }
 $bb = @(1e9, -1e9, 1e9, -1e9)
 foreach ($an in 'idle', 'angriff', 'treffer') { for ($f = 0; $f -lt 8; $f++) { $A = Keys $an $f; . $build; Bounds $bb } }
 Frame $bb

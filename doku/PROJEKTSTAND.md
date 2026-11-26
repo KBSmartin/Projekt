@@ -1,6 +1,6 @@
 # Verlorene Lande: Projektstand
 
-Stand: 19. November 2026
+Stand: 25. November 2026
 
 Verlorene Lande ist ein Deckbuilder-Roguelike im Stil von Slay the Spire. Ausrüstung soll über Tags auf ganze Kartenfamilien wirken. Das Spiel läuft als reine Web-App im Browser: Rust, nach WebAssembly gebaut, später statisch auf Cloudflare Pages.
 
@@ -85,7 +85,9 @@ Der ganze Lauf ist eine Zustandsmaschine in `engine::run::Run`. Die Oberfläche 
 - Ein 8 × 8-Symbol pro Karte, Pixelrahmen je Kartentyp, Edelstein nach Seltenheit.
 - Heldenporträts 16 × 16 mit je 8 Frames für Idle, Heilung, Schaden und Vergiftung.
 - Ein eigenes Hintergrundbild für Titel und jedes Gebiet (320 × 180), dazu animierte Effektebenen wie Schnee, Glut, Nebel, Glühwürmchen oder Nordlicht.
-- Gegner werden aus 3D-Formen gerendert und auf Pixel gerastert (`assets/gegner/`). Die Waldratte ist fertig: gebeugt hockend, 32 × 32, im Kampf 4-fach, mit je 8 Frames für Ruhe, Angriff (Ausholen und Zubeißen, wenn der Gegnerzug Schaden vorsah) und Treffer (Zurückweichen mit kurzem Aufblitzen). `assets/pruefen.ps1` prüft die Blätter. Die übrigen 14 Gegner zeigen noch Emoji-Platzhalter.
+- Gegner werden aus 3D-Formen gerendert und auf Pixel gerastert (`assets/gegner/`). Die Waldratte ist fertig: gebeugt hockend, 32 × 32, im Kampf 4-fach, mit je 8 Frames für Ruhe, Angriff (Ausholen und Zubeißen, wenn der Gegnerzug Schaden vorsah) und Treffer (Zurückweichen mit kurzem Aufblitzen). `assets/pruefen.ps1` prüft die Blätter. Alle 15 Gegner sind animiert und im Kampf (`assets/gegner/<id>.ps1`, Elite und Boss 48 × 48): Ruhe, Angriff, Treffer und Tod. Der Tod passt zum Wesen: Golem, Koloss, Baum, Skelette, Ritter und König zerfallen zu Brocken, Funkengeist und Aschepriester verwehen, der Wurm versinkt, Tiere fallen um (`assets/gegner/tod.ps1`). Die Reste bleiben bis zum Kampfende liegen; ein gewonnener Kampf bleibt dafür 1,9 Sekunden stehen.
+- Eigene Symbole statt Emojis (`assets/symbole/`): 8 × 8 im Text (Status, Absichten, LP, Gold, Ton, Gebiete, Charaktere), Relikte 16 × 16, Bilder für Ereignisse, Gebiete, Rastplatz und Endbildschirme 32 × 32.
+- Spielzeichen ohne Namen: ein in drei Scherben zerbrochener Schild, je Scherbe ein Gebiet (`assets/logo/zeichen.ps1`). Es steht über dem Titel, ist Favicon und Symbol der EXE. Der Schriftzug wartet, bis der Name feststeht.
 
 ### Ton
 

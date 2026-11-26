@@ -10,6 +10,10 @@ $here = $PSScriptRoot
 & (Join-Path $here 'karte\figuren.ps1')
 & (Join-Path $here 'karte\hand.ps1')
 & (Join-Path $here 'gegner\rat.ps1') -Anim alle
+foreach ($e in 'shroom', 'wolf', 'moss', 'mother', 'scorp', 'spark', 'worm', 'priest', 'colossus', 'guard', 'elem', 'giant', 'knight', 'king') { & (Join-Path $here "gegner\$e.ps1") -Anim }
+& (Join-Path $here 'symbole\symbole.ps1')
+& (Join-Path $here 'symbole\bilder.ps1')
+& (Join-Path $here 'logo\zeichen.ps1') -Final
 & (Join-Path $here 'pruefen.ps1')
 if ($LASTEXITCODE) { throw 'Gegner-Sprites fehlerhaft.' }
 & (Join-Path $here 'sound\sounds.ps1')
